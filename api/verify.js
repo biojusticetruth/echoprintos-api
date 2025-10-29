@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     }
 
     // send request to the upstream EchoprintOS API
-    const upstream = new URL("https://echoprintos-api.vercel.app/");
+const upstream = new URL("https://echoprintos-api.vercel.app/api/verify");
     if (ecp_id) upstream.searchParams.set("ecp_id", ecp_id);
     if (hash)   upstream.searchParams.set("hash", hash);
 
