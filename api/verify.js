@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
     // --- 1. Base upstream verification endpoint ---
-    const upstream = new URL("https://echoprintos.org/api/verify");
+    const upstream = new URL("https://echoprintos-api.vercel.app/api/verify");
 
     // --- 2. Accept either ?ecp_id= or ?hash= parameters ---
     const { ecp_id, hash } = req.query;
