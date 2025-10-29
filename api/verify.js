@@ -1,29 +1,26 @@
 export default async function handler(req, res) {
   try {
-    const { ecp_id, hash } = req.query;
+    const { ecp_id } = req.query;
 
-    if (!ecp_id && !hash) {
-      return res.status(400).json({ ok: false, error: "Missing ecp_id or hash" });
+    if (!ecp_id) {
+      return res.status(400).json({ ok: false, error: "Missing ecp_id" });
     }
 
-    // Try direct JSON endpoint first
-    const upstream = new URL("https://echoprintos.org/api/verify.json");
-    if (ecp_id) upstream.searchParams.append("ecp_id", ecp_id);
-    if (hash) upstream.searchParams.append("hash", hash);
+    // Replace with your actual Supabase URL + key
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const response = await fetch(upstream.toString());
-    const text = await response.text();
+    const response = await fetch(`${supabaseUrl}/rest/v1/echoprints?select=*&id=eq.${ecp_id}`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    });
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      // Fallback for HTML / non-JSON response
-      return res.status(502).json({
-        ok: false,
-        error: "Upstream returned HTML instead of JSON — check echoprintos.org/api/verify.json",
-        raw: text.slice(0, 300) + "..."
-      });
+    const data = await response.json();
+
+    if (data.length === 0) {
+      return res.status(404).json({ ok: false, error: "Not found" });
     }
 
     return res.status(200).json({ ok: true, data });
