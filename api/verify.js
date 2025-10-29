@@ -1,51 +1,34 @@
 export default async function handler(req, res) {
   try {
-    // --- 1. Base upstream verification endpoint ---
-    const upstream = new URL("https://echoprintos.org/api/verify");
-
-    // --- 2. Accept either ?ecp_id= or ?hash= parameters ---
     const { ecp_id, hash } = req.query;
 
     if (!ecp_id && !hash) {
-      return res.status(400).json({
+      return res.status(400).json({ ok: false, error: "Missing ecp_id or hash" });
+    }
+
+    // ✅ Real upstream endpoint
+    const upstream = new URL("https://echoprintos.org/api/verify");
+    if (ecp_id) upstream.searchParams.append("ecp_id", ecp_id);
+    if (hash) upstream.searchParams.append("hash", hash);
+
+    const response = await fetch(upstream.toString());
+    const text = await response.text();
+
+    // Try to parse JSON safely
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // fallback for HTML or unexpected response
+      return res.status(502).json({
         ok: false,
-        error: "Missing required parameter: ecp_id or hash",
+        error: "Upstream did not return valid JSON",
+        raw: text.slice(0, 200) + "..." // just first few chars
       });
     }
 
-    // --- 3. Forward parameters to EchoprintOS.org ---
-    const params = new URLSearchParams();
-    if (ecp_id) params.append("ecp_id", ecp_id);
-    if (hash) params.append("hash", hash);
-
-    const verifyUrl = `${upstream}?${params.toString()}`;
-    const response = await fetch(verifyUrl);
-
-    // --- 4. Handle and validate JSON response ---
-    if (!response.ok) {
-      return res.status(response.status).json({
-        ok: false,
-        error: `Upstream returned ${response.status}`,
-      });
-    }
-
-    const data = await response.json();
-
-    // --- 5. Return unified JSON back to your frontend ---
-    res.status(200).json({
-      ok: true,
-      title: data.title || "(untitled)",
-      timestamp: data.timestamp || null,
-      ecp_id: data.ecp_id || ecp_id || null,
-      sha256: data.sha256 || null,
-      image_url: data.image_url || null,
-      image_base64: data.image_base64 || null,
-    });
-  } catch (err) {
-    // --- 6. Graceful error handling ---
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Unexpected server error",
-    });
+    return res.status(200).json({ ok: true, ...data });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
   }
 }
