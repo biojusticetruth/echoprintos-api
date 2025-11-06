@@ -1,7 +1,7 @@
 // api/record.js
-import crypto from "crypto";
+const crypto = require("crypto");
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const auth = req.headers.authorization || "";
@@ -18,15 +18,15 @@ export default async function handler(req, res) {
     platform,
     title || "",
     (content || "").replace(/\s+/g, " ").trim(),
-    url.toLowerCase(),
+    (url || "").toLowerCase(),
     new Date(publishedAt).toISOString()
   ].join("|");
 
   const hash = crypto.createHash("sha256").update(canonical).digest("hex");
-  const runId = crypto.randomUUID();
+  const runId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
   const ts = new Date().toISOString();
 
-  // If Supabase vars exist, try to insert; otherwise just return the receipt
+  // Optional Supabase write
   try {
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const resp = await fetch(`${process.env.SUPABASE_URL}/rest/v1/records`, {
@@ -43,10 +43,7 @@ export default async function handler(req, res) {
           hash, run_id: runId, created_at: ts
         }])
       });
-      if (!resp.ok) {
-        const err = await resp.text();
-        return res.status(500).json({ error: "Supabase insert failed", detail: err });
-      }
+      if (!resp.ok) return res.status(500).json({ error: "Supabase insert failed", detail: await resp.text() });
       const [row] = await resp.json();
       return res.status(200).json({ id: row.id, hash, runId, ts });
     }
@@ -54,6 +51,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Supabase error", detail: String(e) });
   }
 
-  // Fallback if DB is disabled/not ready
   return res.status(200).json({ id: null, hash, runId, ts });
-}
+};
