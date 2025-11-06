@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/verify.js", "use": "@vercel/node" }
-  ],
+  "functions": {
+    "api/*.js": { "runtime": "nodejs18.x" }
+  },
   "routes": [
-    { "src": "/api/verify", "dest": "/api/verify.js" }
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
