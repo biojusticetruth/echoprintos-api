@@ -25,7 +25,7 @@
   .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
   @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-  /* Overlay (used by Quick view + Certificate) */
+  /* Overlay (Quick view + Certificate) */
   .cert-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
   .cert-card{background:#fff;color:#111;max-width:720px;width:min(720px,100%);max-height:85vh;overflow:auto;border-radius:12px;border:1px solid #ddd;padding:24px}
   .cert-card h1{font-size:22px;margin:0 0 12px}
@@ -87,7 +87,7 @@
 
   /* ===== SUPABASE (PASTE YOUR VALUES) ===== */
   const supabase = createClient(
-    'https://cyndhzyfaffprdebclnw.supabase.co', 
+    'https://cyndhzyfaffprdebclnw.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c'
   )
   /* ======================================= */
@@ -99,6 +99,31 @@
   let page=0, pageSize=12, lastKey=''
   const REC = new Map()
   const fmt = ts => ts ? new Date(ts).toISOString().slice(0,19).replace('T',' ') : ''
+  const keyOf = (r)=> r.record_id || r.hash || r.perma_link || r.permalink || r.id || ''
+
+  // best-effort title (for older rows)
+  const displayTitle = (r)=>{
+    const pick = v => typeof v==='string' && v.trim()
+    if(pick(r.title))       return r.title.trim()
+    if(pick(r.post_title))  return r.post_title.trim()
+    if(pick(r.headline))    return r.headline.trim()
+    if(pick(r.name))        return r.name.trim()
+    if(pick(r.caption))     return r.caption.trim()
+    if(pick(r.text))        return (r.text.trim().length>140? r.text.trim().slice(0,140)+'…' : r.text.trim())
+    const link = r.perma_link || r.permalink
+    if(pick(link)){
+      try{
+        const u = new URL(link)
+        const last = u.pathname.split('/').filter(Boolean).pop() || ''
+        if(last) return decodeURIComponent(last).replace(/[-_]+/g,' ').trim()
+      }catch(e){}
+    }
+    return 'Untitled'
+  }
+
+  // where the image might live (older rows used different column names)
+  const imgOf = (r)=> r.url || r.image_url || r.image || r.media_url || r.media || r.photo || r.photo_url || r.thumb_url || r.file_url || null
+  const linkOf = (r)=> r.perma_link || r.permalink || r.permalink_url || r.link || null
 
   // tabs/router
   function setTab(tab){
@@ -112,8 +137,6 @@
   window.addEventListener('hashchange', route)
 
   /* ===== Overlays ===== */
-
-  // Certificate (record_id + timestamp + hash)
   function openCertificate(r){
     const ts = r.sent_at || r.created_at || null
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
@@ -134,7 +157,6 @@
     overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
   }
 
-  // Quick view (same trio, lighter header + shortcuts)
   function openQuickView(r){
     const ts = r.sent_at || r.created_at || null
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
@@ -145,8 +167,8 @@
         <div class="row"><strong>Timestamp:</strong> ${ts ? new Date(ts).toISOString() : ''}</div>
         <div class="row"><strong>Hash (SHA-256):</strong> <code>${esc(r.hash || '')}</code></div>
         <div class="cert-actions">
-          <button class="cert-btn" data-action="cert" data-key="${r.record_id || r.hash}">Certificate</button>
-          <button class="cert-btn" data-action="json"  data-key="${r.record_id || r.hash}">Download JSON</button>
+          <button class="cert-btn" data-action="cert" data-key="${keyOf(r)}">Certificate</button>
+          <button class="cert-btn" data-action="json"  data-key="${keyOf(r)}">Download JSON</button>
           <button class="cert-btn" id="closeQV">Close</button>
         </div>
       </div>`
@@ -155,7 +177,6 @@
     overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
   }
 
-  // JSON download (record_id + timestamp_iso + hash)
   function downloadJSON(r){
     const ts = r.sent_at || r.created_at || null
     const cert = {
@@ -173,7 +194,6 @@
     URL.revokeObjectURL(a.href)
   }
 
-  // one delegated handler for kv/cert/json
   document.addEventListener('click', (e)=>{
     const t = e.target.closest('[data-action]'); if(!t) return
     e.preventDefault()
@@ -183,73 +203,88 @@
     if(t.dataset.action==='json') downloadJSON(r)
   })
 
-  /* ===== VERIFY (shows Title + Record ID + Timestamp; no hash) ===== */
+  /* ===== VERIFY ===== */
   function renderVerify(rows){
     if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
-    out.innerHTML = rows.map(r=>`
+    out.innerHTML = rows.map(r=>{
+      const key = keyOf(r)
+      const img = imgOf(r)
+      return `
       <details>
         <summary style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <strong>${r.title || 'Untitled'}</strong>
+          <strong>${displayTitle(r)}</strong>
           <span>${fmt(r.sent_at || r.created_at)}</span>
         </summary>
         <div style="margin-top:8px">
           <div class="muted">record_id:</div>
           <div style="word-break:break-all">${r.record_id || ''}</div>
-          ${r.perma_link?`<div class="muted" style="margin-top:6px">permalink:</div>
-                          <div><a target="_blank" href="${r.perma_link}" rel="noopener">Open post</a></div>`:''}
-          ${r.url?`<div class="muted" style="margin-top:6px">media:</div>
-                   <div><a target="_blank" href="${r.url}" rel="noopener">View image</a></div>
-                   <details style="margin-top:6px"><summary>Preview</summary>
-                     <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
-                   </details>`:''}
+          ${linkOf(r)?`<div class="muted" style="margin-top:6px">permalink:</div>
+                        <div><a target="_blank" href="${linkOf(r)}" rel="noopener">Open post</a></div>`:''}
+          ${img?`<div class="muted" style="margin-top:6px">media:</div>
+                 <div><a target="_blank" href="${img}" rel="noopener">View image</a></div>
+                 <details style="margin-top:6px"><summary>Preview</summary>
+                   <img src="${img}" referrerpolicy="no-referrer"
+                        style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+                 </details>`:''}
           <div class="row" style="margin-top:6px">
-            <a href="#" data-action="kv"   data-key="${r.record_id || r.hash}">Quick view</a>
-            <a href="#" data-action="cert" data-key="${r.record_id || r.hash}">View certificate</a>
-            <a href="#" data-action="json" data-key="${r.record_id || r.hash}">Download JSON</a>
+            <a href="#" data-action="kv"   data-key="${key}">Quick view</a>
+            <a href="#" data-action="cert" data-key="${key}">View certificate</a>
+            <a href="#" data-action="json" data-key="${key}">Download JSON</a>
           </div>
         </div>
-      </details>`).join('')
-    rows.forEach(r => REC.set(r.record_id || r.hash, r))
+      </details>`
+    }).join('')
+    rows.forEach(r => REC.set(keyOf(r), r))
   }
 
   $('btnVerify').onclick = async ()=>{
     const v = $('q').value.trim()
     if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink URL.</div>'; return }
     const isHash = /^[a-f0-9]{64}$/i.test(v)
-    const { data, error } = await supabase.from('echoprints')
-      .select('*').eq(isHash?'hash':'perma_link', v).limit(5)
+    let data, error
+    if(isHash){
+      ({data, error} = await supabase.from('echoprints').select('*').eq('hash', v).limit(5))
+    }else{
+      ({data, error} = await supabase.from('echoprints').select('*').eq('perma_link', v).limit(5))
+      if((!data || data.length===0) && !error){
+        ({data, error} = await supabase.from('echoprints').select('*').eq('permalink', v).limit(5))
+      }
+    }
     out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
     if(!error) renderVerify(data)
   }
 
   $('btnRecent').onclick = async ()=>{
     const { data, error } = await supabase.from('echoprints')
-      .select('*').order('sent_at',{ascending:false}).limit(10)
+      .select('*').order('sent_at',{ascending:false}).range(0,9)
     out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
     if(!error) renderVerify(data)
   }
   $('btnClear').onclick = ()=>{ $('q').value=''; out.innerHTML='' }
 
-  /* ===== POSTS (shows Title + Record ID + Timestamp; no hash) ===== */
+  /* ===== POSTS ===== */
   function postCard(r){
-    const dt = fmt(r.sent_at || r.created_at)
+    const key = keyOf(r)
+    const dt  = fmt(r.sent_at || r.created_at)
+    const img = imgOf(r)
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>${r.title || 'Untitled'}</strong>
+        <strong>${displayTitle(r)}</strong>
         <div>${dt?`<span class="pill">${dt}</span>`:''}</div>
       </div>
       <div class="muted" style="margin-top:6px">record_id:</div>
       <div style="word-break:break-all">${r.record_id || ''}</div>
       <div class="row" style="margin-top:6px">
-        ${r.perma_link?`<a target="_blank" href="${r.perma_link}" rel="noopener">Open post</a>`:''}
-        ${r.url?`<a target="_blank" href="${r.url}" rel="noopener">View image</a>`:''}
+        ${linkOf(r)?`<a target="_blank" href="${linkOf(r)}" rel="noopener">Open post</a>`:''}
+        ${img?`<a target="_blank" href="${img}" rel="noopener">View image</a>`:''}
         ${r.hash?`<a href="#verify" onclick="document.getElementById('q').value='${r.hash}';document.getElementById('btnVerify').click();return false;">Open in Verify</a>`:''}
-        <a href="#" data-action="kv"   data-key="${r.record_id || r.hash}">Quick view</a>
-        <a href="#" data-action="cert" data-key="${r.record_id || r.hash}">View certificate</a>
-        <a href="#" data-action="json" data-key="${r.record_id || r.hash}">Download JSON</a>
+        <a href="#" data-action="kv"   data-key="${key}">Quick view</a>
+        <a href="#" data-action="cert" data-key="${key}">View certificate</a>
+        <a href="#" data-action="json" data-key="${key}">Download JSON</a>
       </div>
-      ${r.url?`<details style="margin-top:8px"><summary>Preview</summary>
-        <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+      ${img?`<details style="margin-top:8px"><summary>Preview</summary>
+        <img src="${img}" referrerpolicy="no-referrer"
+             style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
       </details>`:''}
     </div>`
   }
@@ -261,17 +296,23 @@
     const key = JSON.stringify({p,s,i})
     if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
 
-    let q = supabase.from('echoprints').select('*').or('perma_link.not.is.null,platform.not.is.null')
+    // SAFE MODE: show all rows; apply filters if selected
+    let q = supabase.from('echoprints').select('*')
     if(p) q=q.eq('platform',p)
-    if(s) q=q.ilike('title', `%${s}%`)
-    if(i) q=q.not('url','is',null)
-    q = q.order('sent_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
+    if(s) q=q.or([
+      `title.ilike.%${s}%`,
+      `post_title.ilike.%${s}%`,
+      `caption.ilike.%${s}%`,
+      `text.ilike.%${s}%`
+    ].join(','))
+    if(i) q=q.or('url.not.is.null,image_url.not.is.null,image.not.is.null,media_url.not.is.null,media.not.is.null,photo.not.is.null,photo_url.not.is.null,thumb_url.not.is.null,file_url.not.is.null')
+    q = q.order('sent_at',{ascending:false}).order('created_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
 
     const { data, error } = await q
     if(error){ list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return }
     if(!data || (data.length===0 && page===0)){ list.innerHTML='<div class="muted">No posts found.</div>'; return }
     list.insertAdjacentHTML('beforeend', data.map(postCard).join(''))
-    data.forEach(r => REC.set(r.record_id || r.hash, r))
+    data.forEach(r => REC.set(keyOf(r), r))
     page++
   }
 
