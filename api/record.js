@@ -1,9 +1,9 @@
 // /api/record.js — Vercel Serverless Function (root-level /api/*)
-//
-// Auth: prefers X-API-Key, also accepts Authorization: Bearer … or ?key=
-// Body: expects JSON with at least { text, url }
+// Auth: X-API-Key (preferred), Authorization: Bearer …, or ?key= fallback
+// Body: expects JSON with at least { text, url }.
 
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 // helpers
 const norm = s => (s || '').replace(/^Bearer\s+/i, '').trim();
@@ -12,6 +12,7 @@ const tsc  = (a, b) => {
   const B = Buffer.from(b || '');
   return A.length === B.length && crypto.timingSafeEqual(A, B);
 };
+const iso = (v) => (v ? new Date(v).toISOString() : null);
 
 export default async function handler(req, res) {
   try {
@@ -23,14 +24,11 @@ export default async function handler(req, res) {
     const expected = (process.env.ECHOPRINTS_API_KEY || '').trim();
     const headerApiKey = (req.headers['x-api-key'] || '').trim();
     const headerBearer = norm(req.headers.authorization || '');
-
-    // query ?key= fallback (Vercel provides req.url without origin)
     let queryKey = '';
     try {
       const u = new URL(req.url, 'http://localhost');
       queryKey = (u.searchParams.get('key') || '').trim();
     } catch {}
-
     const token = headerApiKey || headerBearer || queryKey;
 
     console.log('auth.debug', {
@@ -46,7 +44,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // ---------- BODY PARSING ----------
+    // ---------- BODY ----------
     let body = req.body;
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch { body = null; }
@@ -61,21 +59,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields: text and url' });
     }
 
-    // ✅ Auth + body OK — stub success (uncomment Supabase section below when ready)
-    return res.status(200).json({ ok: true, msg: 'auth passed; stub success' });
+    // ---------- SUPABASE CLIENT ----------
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      return res.status(500).json({ error: 'Server misconfig: Supabase env missing' });
+    }
+    const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    /* ---------- SUPABASE INSERT/UPSERT (optional) ----------
-    // 1) Ensure env vars exist in Vercel: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-    // 2) npm i @supabase/supabase-js
-    // 3) Uncomment this section and the return below
-
-    import { createClient } from '@supabase/supabase-js';
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
-    );
-
+    // ---------- MAP + UPSERT ----------
     const payload = {
       text,
       link: body.link ?? null,
@@ -83,29 +75,24 @@ export default async function handler(req, res) {
       url,
       platform: body.platform ?? null,
       handle: body.handle ?? null,
-      sent_at: body.sent_at ? new Date(body.sent_at).toISOString() : null,
-      scheduled_at: body.scheduled_at ? new Date(body.scheduled_at).toISOString() : null,
-      source: body.source ?? 'buffer',
+      sent_at: iso(body.sent_at),
+      scheduled_at: iso(body.scheduled_at),
+      source: body.source ?? 'make',
       raw: body
     };
 
-    // Optional: make permalink unique in DB, then use upsert to prevent dupes
-    // SQL (run once in Supabase):
-    //   create unique index if not exists echoprints_permalink_uidx on public.echoprints (permalink);
-
+    const conflictCol = payload.permalink ? 'permalink' : 'url';
     const { data, error } = await supabase
-      //.insert(payload)               // for inserts only
-      .from('echoprints').upsert(payload, { onConflict: 'permalink' }).select();
+      .from('echoprints')
+      .upsert(payload, { onConflict: conflictCol })
+      .select();
 
     if (error) {
       console.error('record.insert.error', error);
       return res.status(500).json({ error: 'Supabase insert failed', detail: error.message });
     }
 
-    return res.status(200).json({ ok: true, data });
-    // ---------- END SUPABASE ----------
-    */
-
+    return res.status(200).json({ ok: true, conflictCol, rows: data?.length || 0 });
   } catch (err) {
     console.error('record.handler.crash', err);
     return res.status(500).json({ error: 'Handler crashed', detail: err?.message });
