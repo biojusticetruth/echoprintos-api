@@ -1,6 +1,7 @@
 // /api/record.js — Vercel Serverless Function (root-level /api/*)
 // Auth: X-API-Key (preferred), Authorization: Bearer …, or ?key= fallback
-// Body: expects JSON with at least { text, url }.
+// Body: expects JSON with at least { text, url }. Optional fields below.
+// perma_link is the database column. Send `perma_link` in body if available.
 
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
@@ -67,11 +68,11 @@ export default async function handler(req, res) {
     }
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // ---------- MAP + UPSERT ----------
+    // ---------- MAP + UPSERT (perma_link only) ----------
     const payload = {
       text,
       link: body.link ?? null,
-      permalink: body.permalink ?? null,
+      perma_link: body.perma_link ?? null,   // only perma_link is supported
       url,
       platform: body.platform ?? null,
       handle: body.handle ?? null,
@@ -81,7 +82,9 @@ export default async function handler(req, res) {
       raw: body
     };
 
-    const conflictCol = payload.permalink ? 'permalink' : 'url';
+    // use perma_link for conflict if present, otherwise fall back to url
+    const conflictCol = payload.perma_link ? 'perma_link' : 'url';
+
     const { data, error } = await supabase
       .from('echoprints')
       .upsert(payload, { onConflict: conflictCol })
