@@ -1,103 +1,69 @@
-// /api/record.js — Vercel Serverless Function (root-level /api/*)
-// Auth: X-API-Key (preferred), Authorization: Bearer …, or ?key= fallback
-// Body: expects JSON with at least { text, url }. Optional fields below.
-// perma_link is the database column. Send `perma_link` in body if available.
+// /api/record.js  (Next.js Pages API on Vercel)
+// Node runtime
+export const config = { runtime: 'nodejs18.x' };
 
-import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
-
-// helpers
-const norm = s => (s || '').replace(/^Bearer\s+/i, '').trim();
-const tsc  = (a, b) => {
-  const A = Buffer.from(a || '');
-  const B = Buffer.from(b || '');
-  return A.length === B.length && crypto.timingSafeEqual(A, B);
-};
-const iso = (v) => (v ? new Date(v).toISOString() : null);
+function norm(s) { return (s || '').trim(); }
+function jsonBody(req) {
+  try {
+    if (!req.body) return {};
+    return typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch { return {}; }
+}
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    // ---------- AUTH (X-API-Key, Bearer, or ?key=) ----------
-    const expected = (process.env.ECHOPRINTS_API_KEY || '').trim();
-    const headerApiKey = (req.headers['x-api-key'] || '').trim();
-    const headerBearer = norm(req.headers.authorization || '');
-    let queryKey = '';
-    try {
-      const u = new URL(req.url, 'http://localhost');
-      queryKey = (u.searchParams.get('key') || '').trim();
-    } catch {}
-    const token = headerApiKey || headerBearer || queryKey;
-
-    console.log('auth.debug', {
-      gotXApiKey: Boolean(headerApiKey),
-      gotBearer:  Boolean(headerBearer),
-      gotQuery:   Boolean(queryKey),
-      tokenLen:   (token || '').length,
-      expectedLen: expected.length,
-      vercelEnv:  process.env.VERCEL_ENV || null
-    });
-
-    if (!expected || !token || !tsc(token, expected)) {
+    // --- Auth: query ?key=..., X-API-Key, or Authorization: Bearer ...
+    const qKey   = norm(req.query?.key);
+    const hKey   = norm(req.headers['x-api-key']);
+    const auth   = norm(req.headers.authorization);
+    const bearer = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7) : auth;
+    const token  = qKey || hKey || bearer || '';
+    const expected = norm(process.env.ECHOPRINTS_API_KEY);
+    if (!token || !expected || token !== expected) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // ---------- BODY ----------
-    let body = req.body;
-    if (typeof body === 'string') {
-      try { body = JSON.parse(body); } catch { body = null; }
-    }
-    if (!body || typeof body !== 'object') {
-      return res.status(400).json({ error: 'Invalid JSON body' });
-    }
-
-    const text = (body.text ?? '').toString().trim();
-    const url  = (body.url  ?? '').toString().trim();
-    if (!text || !url) {
-      return res.status(400).json({ error: 'Missing required fields: text and url' });
-    }
-
-    // ---------- SUPABASE CLIENT ----------
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceKey) {
-      return res.status(500).json({ error: 'Server misconfig: Supabase env missing' });
-    }
-    const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-
-    // ---------- MAP + UPSERT (perma_link only) ----------
+    // --- Body
+    const b = jsonBody(req);
     const payload = {
-      text,
-      link: body.link ?? null,
-      perma_link: body.perma_link ?? null,   // only perma_link is supported
-      url,
-      platform: body.platform ?? null,
-      handle: body.handle ?? null,
-      sent_at: iso(body.sent_at),
-      scheduled_at: iso(body.scheduled_at),
-      source: body.source ?? 'make',
-      raw: body
+      text: b.text ?? null,
+      link: b.link ?? null,
+      perma_link: b.perma_link ?? b.permalink ?? null, // accepts old input, writes perma_link
+      url: b.url ?? null,
+      platform: b.platform ?? null,
+      handle: b.handle ?? null,
+      sent_at: b.sent_at ? new Date(b.sent_at) : null,
+      scheduled_at: b.scheduled_at ? new Date(b.scheduled_at) : null,
+      source: b.source ?? 'make',
+      raw: b
     };
 
-    // use perma_link for conflict if present, otherwise fall back to url
-    const conflictCol = payload.perma_link ? 'perma_link' : 'url';
-
-    const { data, error } = await supabase
-      .from('echoprints')
-      .upsert(payload, { onConflict: conflictCol })
-      .select();
-
-    if (error) {
-      console.error('record.insert.error', error);
-      return res.status(500).json({ error: 'Supabase insert failed', detail: error.message });
+    if (!payload.text || !(payload.perma_link || payload.url)) {
+      return res.status(400).json({ error: 'Missing required fields: text and perma_link (or url)' });
     }
 
-    return res.status(200).json({ ok: true, conflictCol, rows: data?.length || 0 });
-  } catch (err) {
-    console.error('record.handler.crash', err);
-    return res.status(500).json({ error: 'Handler crashed', detail: err?.message });
+    // --- Supabase client
+    const { createClient } = require('@supabase/supabase-js');
+    const SUPABASE_URL = norm(process.env.SUPABASE_URL);
+    const SERVICE_KEY  = norm(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    if (!SUPABASE_URL || !SERVICE_KEY) {
+      return res.status(500).json({ error: 'Supabase env missing' });
+    }
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+    // --- Upsert on perma_link
+    const { data, error } = await supabase
+      .from('echoprints')
+      .upsert(payload, { onConflict: 'perma_link' })
+      .select()
+      .limit(1);
+
+    if (error) return res.status(500).json({ error: 'Supabase upsert failed', detail: error.message });
+
+    return res.status(200).json({ ok: true, conflictCol: 'perma_link', rows: data?.length || 0, record: data?.[0] ?? null });
+  } catch (e) {
+    return res.status(500).json({ error: 'Handler crashed', detail: e?.message || String(e) });
   }
 }
