@@ -1,131 +1,166 @@
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EchoprintOS — Verify & Posts</title>
-<style>
-  :root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
-  *{box-sizing:border-box}
-  body{font:16px/1.5 Inter,system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:var(--fg)}
-  a{color:var(--acc);text-decoration:none}
-  .wrap{max-width:980px;margin:40px auto;padding:0 18px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  h1{font-size:22px;margin:0}
-  nav{display:flex;gap:8px}
-  .tab{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#0f1418;cursor:pointer}
-  .tab.active{outline:2px solid var(--acc)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
-  input[type=text],select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1418;color:var(--fg)}
-  button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#161d23;color:var(--fg);cursor:pointer}
-  button+button{margin-left:8px}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .muted{opacity:.75;font-size:13px}
-  details{background:#0f1418;border-radius:8px;padding:10px;margin-top:8px;border:1px solid var(--line)}
-  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;margin-right:6px}
-  .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
-  @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-  /* Overlay (Quick view + Certificate) */
-  .cert-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
-  .cert-card{background:#fff;color:#111;max-width:720px;width:min(720px,100%);max-height:85vh;overflow:auto;border-radius:12px;border:1px solid #ddd;padding:24px}
-  .cert-card h1{font-size:22px;margin:0 0 12px}
-  .cert-card .m{color:#666;font-size:13px}
-  .cert-card .row{margin:8px 0}
-  .cert-actions{display:flex;gap:8px;margin-top:12px}
-  .cert-btn{padding:8px 12px;border:1px solid #ccc;border-radius:8px;background:#f8f8f8;cursor:pointer}
-</style>
-
-<div class="wrap">
-  <header>
-    <h1>EchoprintOS</h1>
-    <nav>
-      <a class="tab" data-tab="verify" href="#verify">Verify</a>
-      <a class="tab" data-tab="posts"  href="#posts">Posts</a>
-    </nav>
-  </header>
-
-  <!-- VERIFY -->
-  <section id="view-verify" class="card" hidden>
-    <h2 style="margin:0 0 8px 0;font-size:18px">Verify an Echoprint</h2>
-    <label class="muted">Paste a SHA-256 hash or a permalink</label>
-    <input id="q" type="text" placeholder="e.g., 6f1a… or https://substack.com/p/…">
-    <div class="row">
-      <button id="btnVerify">Verify</button>
-      <button id="btnRecent" title="Show recent">Recent</button>
-      <button id="btnClear"  title="Clear">Clear</button>
-    </div>
-    <div id="out" style="margin-top:14px"></div>
-  </section>
-
-  <!-- POSTS -->
-  <section id="view-posts" class="card" hidden>
-    <h2 style="margin:0 0 8px 0;font-size:18px">Echoprinted Posts</h2>
-    <div class="toolbar">
-      <select id="platform">
-        <option value="">All platforms</option>
-        <option>Substack</option><option>LinkedIn</option><option>X</option>
-        <option>Instagram</option><option>YouTube</option>
-      </select>
-      <input id="search" type="text" placeholder="Search title…">
-      <label style="display:flex;align-items:center;gap:6px;opacity:.85">
-        <input id="imgonly" type="checkbox"> with image only
-      </label>
-      <button id="refresh">Refresh</button>
-    </div>
-    <div id="list" class="grid"></div>
-    <div class="row" style="justify-content:center">
-      <button id="more">Load more</button>
-    </div>
-  </section>
-</div>
-
-<!-- Overlay root -->
-<div id="certOverlay" class="cert-backdrop" role="dialog" aria-modal="true"></div>
-
-<script type="module">
+<script src="env.js"></script>
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  // --- ENV (from env.js) ---
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = (window.__ENV || {})
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ alert('Missing SUPABASE env'); }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-  /* ===== SUPABASE (PASTE YOUR VALUES) ===== */
-  const supabase = createClient(
-    'https://cyndhzyfaffprdebclnw.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c'
-  )
-  /* ======================================= */
-
-  // helpers
-  const $  = (id)=>document.getElementById(id)
-  const qs = (s)=>document.querySelector(s)
-  const out = $('out'), list = $('list'), overlay = $('certOverlay')
+  // --- DOM helpers ---
+  const $=(id)=>document.getElementById(id), qs=(s)=>document.querySelector(s)
+  const out=$('out'), list=$('list')
   let page=0, pageSize=12, lastKey=''
-  const REC = new Map()
-  const fmt = ts => ts ? new Date(ts).toISOString().slice(0,19).replace('T',' ') : ''
-  const keyOf = (r)=> r.record_id || r.hash || r.perma_link || r.permalink || r.id || ''
+  const REC=new Map()
 
-  // best-effort title (for older rows)
-  const displayTitle = (r)=>{
-    const pick = v => typeof v==='string' && v.trim()
-    if(pick(r.title))       return r.title.trim()
-    if(pick(r.post_title))  return r.post_title.trim()
-    if(pick(r.headline))    return r.headline.trim()
-    if(pick(r.name))        return r.name.trim()
-    if(pick(r.caption))     return r.caption.trim()
-    if(pick(r.text))        return (r.text.trim().length>140? r.text.trim().slice(0,140)+'…' : r.text.trim())
-    const link = r.perma_link || r.permalink
-    if(pick(link)){
-      try{
-        const u = new URL(link)
-        const last = u.pathname.split('/').filter(Boolean).pop() || ''
-        if(last) return decodeURIComponent(last).replace(/[-_]+/g,' ').trim()
-      }catch(e){}
-    }
-    return 'Untitled'
+  // --- Make sure an overlay exists (same-page certificate view) ---
+  let overlay = $('certOverlay')
+  if(!overlay){
+    overlay = document.createElement('div')
+    overlay.id='certOverlay'
+    overlay.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:9999;padding:16px'
+    document.body.appendChild(overlay)
+  }
+  const overlayCSS = `
+    .cert-card{max-width:720px;width:100%;background:#fff;color:#111;border-radius:14px;border:1px solid #e6e6e6;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+    .cert-body{padding:24px}
+    .cert-actions{display:flex;flex-wrap:wrap;gap:8px;padding:16px;border-top:1px solid #eee;background:#fafafa;border-radius:0 0 14px 14px}
+    .cert-btn{padding:10px 14px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+    .cert-close{position:absolute;right:14px;top:10px;font-size:26px;line-height:26px;cursor:pointer;padding:4px 10px}
+    .cert-h{margin:0 0 8px;font:600 22px/1.2 Inter,system-ui,Segoe UI,Arial}
+    .cert-m{color:#666;font:14px/1.4 Inter,system-ui}
+    .cert-row{margin:12px 0}
+    .cert-row code{background:#f7f7f9;padding:2px 6px;border-radius:6px}
+  `
+  const styleTag = document.createElement('style'); styleTag.textContent = overlayCSS; document.head.appendChild(styleTag)
+
+  // --- Field helpers / normalization ---
+  const titleOf = (r)=>{
+    const c = [r.title, r.post_title, r.caption, r.text].find(v=>typeof v==='string' && v.trim())
+    return c ? c.trim() : 'Untitled'
+  }
+  const linkOf  = (r)=> r.perma_link || r.permalink || r.permalink_url || r.link || r.document_url || r.doc_url || r.file_url || r.url || null
+  const imgOf   = (r)=> r.url || r.image_url || r.image || r.media_url || r.media || r.photo || r.photo_url || r.thumb_url || r.file_url || null
+  const tsOf    = (r)=> r.sent_at || r.created_at || r.timestamp_iso || null
+  const fmt     = (ts)=> ts ? new Date(ts).toISOString().slice(0,19).replace('T',' ') : ''
+  const esc     = (s)=> String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]))
+
+  // --- Load html2canvas on demand (for .png certificate) ---
+  function loadPNGHelper(){
+    return new Promise((res,rej)=>{
+      if(window.html2canvas) return res(window.html2canvas)
+      const s=document.createElement('script')
+      s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+      s.onload=()=>res(window.html2canvas)
+      s.onerror=()=>rej(new Error('png helper failed to load'))
+      document.head.appendChild(s)
+    })
   }
 
-  // where the image might live (older rows used different column names)
-  const imgOf = (r)=> r.url || r.image_url || r.image || r.media_url || r.media || r.photo || r.photo_url || r.thumb_url || r.file_url || null
-  const linkOf = (r)=> r.perma_link || r.permalink || r.permalink_url || r.link || null
+  // --- Certificate overlay (same page, no new tab) ---
+  function openCert(r){
+    const ts = tsOf(r)
+    overlay.innerHTML = `
+      <div class="cert-card">
+        <div class="cert-close" aria-label="Close" role="button">&times;</div>
+        <div class="cert-body">
+          <h1 class="cert-h">Echoprint Certificate</h1>
+          <div class="cert-m">This is a preview of your certificate. Verified by EchoprintOS.</div>
+          <div class="cert-row"><strong>TITLE</strong><br>${esc(titleOf(r))}</div>
+          <div class="cert-row"><strong>RECORD ID</strong><br><code>${esc(r.record_id || '')}</code></div>
+          <div class="cert-row"><strong>SHA-256 HASH</strong><br><code>${esc(r.hash || '')}</code></div>
+          <div class="cert-row"><strong>TIMESTAMP (UTC)</strong><br>${esc(ts ? new Date(ts).toISOString() : '')}</div>
+        </div>
+        <div class="cert-actions">
+          <button class="cert-btn" id="certPNG">Download certificate (.png)</button>
+          <button class="cert-btn" id="certJSON">Download JSON</button>
+          <button class="cert-btn" id="certPrint">Print / Save PDF</button>
+          <button class="cert-btn" id="certClose">Close</button>
+        </div>
+      </div>`
+    overlay.style.display='flex'
+    const close=()=> overlay.style.display='none'
+    overlay.querySelector('.cert-close').onclick = close
+    overlay.onclick = (e)=>{ if(e.target===overlay) close() }
+    document.getElementById('certClose').onclick = close
+    document.getElementById('certPrint').onclick = ()=> window.print()
+    document.getElementById('certJSON').onclick  = ()=> downloadJSON(r)
+    document.getElementById('certPNG').onclick   = async ()=>{
+      await loadPNGHelper()
+      const card = overlay.querySelector('.cert-card')
+      const canvas = await window.html2canvas(card, { backgroundColor:'#fff', scale:2 })
+      const a=document.createElement('a'); a.href=canvas.toDataURL('image/png')
+      a.download = `${(r.record_id||r.hash||'echoprint').slice(0,16)}.certificate.png`; a.click()
+    }
+  }
 
-  // tabs/router
+  // --- Downloads (JSON) ---
+  function downloadJSON(r){
+    const ts = tsOf(r)
+    const cert = { schema:'echoprint.v1',
+      record_id:r.record_id ?? null,
+      timestamp_iso: ts ? new Date(ts).toISOString() : null,
+      hash:r.hash ?? null
+    }
+    const blob=new Blob([JSON.stringify(cert,null,2)],{type:'application/json'})
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob)
+    a.download = `${(r.record_id||r.hash||'echoprint').slice(0,16)}.echoprint.json`; a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  // --- Shared small card (feed & verify) ---
+  function smallCard(r){
+    const key = r.record_id || r.hash || r.perma_link || r.permalink || Math.random().toString(36).slice(2)
+    REC.set(key,r)
+    const ts = fmt(tsOf(r))
+    return `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <strong>${esc(titleOf(r))}</strong>
+          <div>${ts?`<span class="pill">${esc(ts)}</span>`:''}</div>
+        </div>
+        <div class="muted" style="margin-top:6px">EchoprintOS Record ID:</div>
+        <div style="word-break:break-all">${esc(r.record_id || '')}</div>
+        <div class="row" style="margin-top:8px">
+          <a href="#" data-action="expand" data-key="${key}">View</a>
+          <a href="#" data-action="cert"   data-key="${key}">View certificate</a>
+          <a href="#" data-action="json"   data-key="${key}">Download JSON</a>
+          <a href="#" data-action="png"    data-key="${key}">Download certificate (.png)</a>
+        </div>
+        <div id="x-${key}" style="display:none;margin-top:10px"></div>
+      </div>`
+  }
+
+  // --- Expanded details (same for feed & verify) ---
+  function expandCard(r, mountId){
+    const link = linkOf(r), img = imgOf(r)
+    const ts = fmt(tsOf(r))
+    const hashRow = r.hash ? `<div class="muted" style="margin-top:6px">hash (SHA-256)</div><div style="word-break:break-all">${esc(r.hash)}</div>` : ''
+    qs('#'+mountId).innerHTML = `
+      ${img?`<div class="muted">media</div><div style="margin:6px 0"><a target="_blank" href="${img}">Open image</a></div>
+        <details style="margin-top:6px"><summary>Preview</summary>
+          <img src="${img}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+        </details>`:''}
+      ${link?`<div class="muted" style="margin-top:6px">link</div><div><a target="_blank" href="${link}">${link}</a></div>`:''}
+      <div class="muted" style="margin-top:6px">title</div><div>${esc(titleOf(r))}</div>
+      <div class="muted" style="margin-top:6px">record_id</div><div style="word-break:break-all">${esc(r.record_id||'')}</div>
+      ${hashRow}
+      <div class="muted" style="margin-top:6px">timestamp (UTC)</div><div>${esc(ts)}</div>
+      <div class="muted" style="margin-top:10px">Verified by EchoprintOS</div>
+    `
+    qs('#'+mountId).style.display='block'
+  }
+
+  // --- Global click handling (View / JSON / PNG / Certificate) ---
+  document.addEventListener('click', (e)=>{
+    const t=e.target.closest('[data-action]'); if(!t) return
+    e.preventDefault()
+    const r=REC.get(t.dataset.key); if(!r) return
+    if(t.dataset.action==='expand') expandCard(r, 'x-'+t.dataset.key)
+    if(t.dataset.action==='cert')   openCert(r)
+    if(t.dataset.action==='json')   downloadJSON(r)
+    if(t.dataset.action==='png')    (openCert(r), setTimeout(()=>{document.getElementById('certPNG').click()},30))
+  })
+
+  // --- Tabs ---
   function setTab(tab){
     const isVerify = tab==='verify'
     qs('#view-verify').hidden = !isVerify
@@ -133,193 +168,69 @@
     document.querySelectorAll('.tab').forEach(a=>a.classList.toggle('active', a.dataset.tab===tab))
     if(isVerify){ $('q').focus() }
   }
-  function route(){ const tab=(location.hash||'#verify').slice(1) || 'verify'; setTab(tab); if(tab==='posts'){ fetchPosts(true) } }
+  function route(){
+    const tab=(location.hash||'#verify').slice(1) || 'verify'
+    setTab(tab)
+    if(tab==='posts'){ fetchPosts(true) }
+    if(tab==='verify'){ loadRecentForVerify() }   // auto-recall feed
+  }
   window.addEventListener('hashchange', route)
 
-  /* ===== Overlays ===== */
-  function openCertificate(r){
-    const ts = r.sent_at || r.created_at || null
-    const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
-    overlay.innerHTML = `
-      <div class="cert-card">
-        <h1>Echoprint Certificate</h1>
-        <div class="m">schema: echoprint.v1</div>
-        <div class="row"><strong>Record ID:</strong> <code>${esc(r.record_id || '')}</code></div>
-        <div class="row"><strong>Timestamp:</strong> ${ts ? new Date(ts).toISOString() : ''}</div>
-        <div class="row"><strong>Hash (SHA-256):</strong> <code>${esc(r.hash || '')}</code></div>
-        <div class="cert-actions">
-          <button class="cert-btn" onclick="window.print()">Print</button>
-          <button class="cert-btn" id="closeCert">Close</button>
-        </div>
-      </div>`
-    overlay.style.display = 'flex'
-    $('closeCert').onclick = ()=> overlay.style.display = 'none'
-    overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
-  }
-
-  function openQuickView(r){
-    const ts = r.sent_at || r.created_at || null
-    const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
-    overlay.innerHTML = `
-      <div class="cert-card">
-        <h1>Quick view</h1>
-        <div class="row"><strong>Record ID:</strong> <code>${esc(r.record_id || '')}</code></div>
-        <div class="row"><strong>Timestamp:</strong> ${ts ? new Date(ts).toISOString() : ''}</div>
-        <div class="row"><strong>Hash (SHA-256):</strong> <code>${esc(r.hash || '')}</code></div>
-        <div class="cert-actions">
-          <button class="cert-btn" data-action="cert" data-key="${keyOf(r)}">Certificate</button>
-          <button class="cert-btn" data-action="json"  data-key="${keyOf(r)}">Download JSON</button>
-          <button class="cert-btn" id="closeQV">Close</button>
-        </div>
-      </div>`
-    overlay.style.display = 'flex'
-    $('closeQV').onclick = ()=> overlay.style.display = 'none'
-    overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
-  }
-
-  function downloadJSON(r){
-    const ts = r.sent_at || r.created_at || null
-    const cert = {
-      schema: "echoprint.v1",
-      record_id: r.record_id ?? null,
-      timestamp_iso: ts ? new Date(ts).toISOString() : null,
-      hash: r.hash ?? null
-    }
-    const blob = new Blob([JSON.stringify(cert, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    const base = (r.record_id || r.hash || 'echoprint').slice(0, 16)
-    a.download = `${base}.echoprint.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
-  document.addEventListener('click', (e)=>{
-    const t = e.target.closest('[data-action]'); if(!t) return
-    e.preventDefault()
-    const r = REC.get(t.dataset.key); if(!r) return
-    if(t.dataset.action==='kv')   openQuickView(r)
-    if(t.dataset.action==='cert') openCertificate(r)
-    if(t.dataset.action==='json') downloadJSON(r)
-  })
-
-  /* ===== VERIFY ===== */
+  // --- VERIFY (auto recent + manual search) ---
   function renderVerify(rows){
-    if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
-    out.innerHTML = rows.map(r=>{
-      const key = keyOf(r)
-      const img = imgOf(r)
-      return `
-      <details>
-        <summary style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <strong>${displayTitle(r)}</strong>
-          <span>${fmt(r.sent_at || r.created_at)}</span>
-        </summary>
-        <div style="margin-top:8px">
-          <div class="muted">record_id:</div>
-          <div style="word-break:break-all">${r.record_id || ''}</div>
-          ${linkOf(r)?`<div class="muted" style="margin-top:6px">permalink:</div>
-                        <div><a target="_blank" href="${linkOf(r)}" rel="noopener">Open post</a></div>`:''}
-          ${img?`<div class="muted" style="margin-top:6px">media:</div>
-                 <div><a target="_blank" href="${img}" rel="noopener">View image</a></div>
-                 <details style="margin-top:6px"><summary>Preview</summary>
-                   <img src="${img}" referrerpolicy="no-referrer"
-                        style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
-                 </details>`:''}
-          <div class="row" style="margin-top:6px">
-            <a href="#" data-action="kv"   data-key="${key}">Quick view</a>
-            <a href="#" data-action="cert" data-key="${key}">View certificate</a>
-            <a href="#" data-action="json" data-key="${key}">Download JSON</a>
-          </div>
-        </div>
-      </details>`
-    }).join('')
-    rows.forEach(r => REC.set(keyOf(r), r))
+    out.innerHTML = (!rows || rows.length===0)
+      ? '<div class="muted">No records found.</div>'
+      : rows.map(smallCard).join('')
   }
-
+  async function loadRecentForVerify(){
+    const { data, error } = await supabase
+      .from('echoprints').select('*')
+      .order('sent_at',{ascending:false}).order('created_at',{ascending:false})
+      .limit(10)
+    out.innerHTML = error ? `<div class="muted">Error: ${esc(error.message)}</div>` : ''
+    if(!error) renderVerify(data)
+  }
   $('btnVerify').onclick = async ()=>{
     const v = $('q').value.trim()
-    if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink URL.</div>'; return }
+    if(!v){ loadRecentForVerify(); return }
     const isHash = /^[a-f0-9]{64}$/i.test(v)
-    let data, error
-    if(isHash){
-      ({data, error} = await supabase.from('echoprints').select('*').eq('hash', v).limit(5))
-    }else{
-      ({data, error} = await supabase.from('echoprints').select('*').eq('perma_link', v).limit(5))
-      if((!data || data.length===0) && !error){
-        ({data, error} = await supabase.from('echoprints').select('*').eq('permalink', v).limit(5))
-      }
-    }
-    out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
+    let q = supabase.from('echoprints').select('*').limit(5)
+    q = isHash ? q.eq('hash', v)
+               : q.or([
+                    `perma_link.eq.${v}`,
+                    `permalink.eq.${v}`,
+                    `link.eq.${v}`,
+                    `document_url.eq.${v}`,
+                    `doc_url.eq.${v}`,
+                    `file_url.eq.${v}`,
+                    `url.eq.${v}`
+                  ].join(','))
+    const { data, error } = await q
+    out.innerHTML = error ? `<div class="muted">Error: ${esc(error.message)}</div>` : ''
     if(!error) renderVerify(data)
   }
+  $('btnRecent').onclick = ()=> loadRecentForVerify()
+  $('btnClear').onclick  = ()=>{ $('q').value=''; loadRecentForVerify() }
 
-  $('btnRecent').onclick = async ()=>{
-    const { data, error } = await supabase.from('echoprints')
-      .select('*').order('sent_at',{ascending:false}).range(0,9)
-    out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
-    if(!error) renderVerify(data)
-  }
-  $('btnClear').onclick = ()=>{ $('q').value=''; out.innerHTML='' }
-
-  /* ===== POSTS ===== */
-  function postCard(r){
-    const key = keyOf(r)
-    const dt  = fmt(r.sent_at || r.created_at)
-    const img = imgOf(r)
-    return `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>${displayTitle(r)}</strong>
-        <div>${dt?`<span class="pill">${dt}</span>`:''}</div>
-      </div>
-      <div class="muted" style="margin-top:6px">record_id:</div>
-      <div style="word-break:break-all">${r.record_id || ''}</div>
-      <div class="row" style="margin-top:6px">
-        ${linkOf(r)?`<a target="_blank" href="${linkOf(r)}" rel="noopener">Open post</a>`:''}
-        ${img?`<a target="_blank" href="${img}" rel="noopener">View image</a>`:''}
-        ${r.hash?`<a href="#verify" onclick="document.getElementById('q').value='${r.hash}';document.getElementById('btnVerify').click();return false;">Open in Verify</a>`:''}
-        <a href="#" data-action="kv"   data-key="${key}">Quick view</a>
-        <a href="#" data-action="cert" data-key="${key}">View certificate</a>
-        <a href="#" data-action="json" data-key="${key}">Download JSON</a>
-      </div>
-      ${img?`<details style="margin-top:8px"><summary>Preview</summary>
-        <img src="${img}" referrerpolicy="no-referrer"
-             style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
-      </details>`:''}
-    </div>`
-  }
-
+  // --- POSTS (live feed) ---
+  function postCard(r){ return smallCard(r) }  // same look as verify (identical)
   async function fetchPosts(reset=false){
-    const p = document.getElementById('platform').value.trim()
-    const s = document.getElementById('search').value.trim()
-    const i = document.getElementById('imgonly').checked
-    const key = JSON.stringify({p,s,i})
-    if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
-
-    // SAFE MODE: show all rows; apply filters if selected
+    const p = $('platform').value.trim(), s = $('search').value.trim(), i = $('imgonly').checked
+    const key = JSON.stringify({p,s,i}); if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
     let q = supabase.from('echoprints').select('*')
     if(p) q=q.eq('platform',p)
-    if(s) q=q.or([
-      `title.ilike.%${s}%`,
-      `post_title.ilike.%${s}%`,
-      `caption.ilike.%${s}%`,
-      `text.ilike.%${s}%`
-    ].join(','))
+    if(s) q=q.or(['title','post_title','caption','text'].map(col=>`${col}.ilike.%${s}%`).join(','))
     if(i) q=q.or('url.not.is.null,image_url.not.is.null,image.not.is.null,media_url.not.is.null,media.not.is.null,photo.not.is.null,photo_url.not.is.null,thumb_url.not.is.null,file_url.not.is.null')
     q = q.order('sent_at',{ascending:false}).order('created_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
-
     const { data, error } = await q
-    if(error){ list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return }
+    if(error){ list.innerHTML = `<div class="muted">Error: ${esc(error.message)}</div>`; return }
     if(!data || (data.length===0 && page===0)){ list.innerHTML='<div class="muted">No posts found.</div>'; return }
-    list.insertAdjacentHTML('beforeend', data.map(postCard).join(''))
-    data.forEach(r => REC.set(keyOf(r), r))
-    page++
+    list.insertAdjacentHTML('beforeend', data.map(postCard).join('')); page++
   }
 
-  document.getElementById('refresh').onclick = ()=>fetchPosts(true)
-  document.getElementById('more').onclick = ()=>fetchPosts(false)
-
+  // --- boot ---
   if(!location.hash) location.hash = '#verify'
   route()
+  $('refresh').onclick = ()=>fetchPosts(true)
+  $('more').onclick    = ()=>fetchPosts(false)
 </script>
-</html>
