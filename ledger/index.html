@@ -1,194 +1,75 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>EchoprintOS — Verify & Recent</title>
-<style>
-:root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
-*{box-sizing:border-box} body{font:16px/1.5 system-ui,Inter,Arial;margin:0;background:var(--bg);color:var(--fg)}
-a{color:var(--acc)} .wrap{max-width:980px;margin:36px auto;padding:0 18px}
-h1{font-size:22px;margin:0 0 6px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
-input,button,select,textarea{border:1px solid var(--line);background:#0f1418;color:var(--fg);border-radius:10px;padding:10px}
-input,select,textarea{width:100%} button{cursor:pointer}
-.row{display:flex;gap:8px;flex-wrap:wrap} .muted{opacity:.75;font-size:13px}
-.grid{display:grid;grid-template-columns:1fr;gap:12px} @media(min-width:680px){.grid{grid-template-columns:1fr 1fr}}
-.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
-#certOverlay{position:fixed;inset:0;background:rgba(5,8,12,.6);display:none;z-index:9999}
-#certPane{max-width:760px;margin:4vh auto;background:#fff;color:#111;border-radius:12px;padding:20px;overflow:auto;max-height:92vh}
-#certPane img{max-width:100%;border:1px solid #ddd;border-radius:8px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS — Verify & Recent</title>
+  <link rel="stylesheet" href="./assets/css/styles.css" />
+  <style>
+    body{font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+    .wrap{max-width:940px;margin:32px auto;padding:0 16px}
+    h1{font-size:22px;margin:0 0 16px}
+    .pane{margin:24px 0;padding:16px;border:1px solid #ddd;border-radius:8px}
+    form{display:flex;gap:8px}
+    input{flex:1;padding:10px 12px;border:1px solid #ccc;border-radius:6px}
+    button{padding:10px 12px;border:1px solid #888;border-radius:6px;background:#f7f7f7}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .card{border:1px solid #e1e1e1;border-radius:10px;padding:12px}
+    .card header{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+    .title{margin:0;font-size:16px}
+    .ecp{opacity:.7}
+    dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:10px 0}
+    dt{opacity:.6}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .muted{opacity:.7}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>EchoprintOS</h1>
+  <div class="wrap">
+    <h1>🔎 EchoprintOS — Verify & Recent</h1>
 
-  <!-- VERIFY -->
-  <section class="card">
-    <div class="muted">Enter EchoprintOS Record ID (ECP-…), UUID, 64-hex hash, or a permalink</div>
-    <div class="row" style="margin-top:8px">
-      <input id="q" placeholder="ECP-… or 6f1a… or https://…">
-      <button id="btnVerify">Verify</button>
-      <button id="btnRecent">Recent</button>
-      <button id="btnClear">Clear</button>
-    </div>
-    <div id="out" style="margin-top:12px"></div>
-  </section>
+    <!-- Verify -->
+    <section id="verify" class="pane">
+      <h2>Verify</h2>
+      <form id="verify-form">
+        <input id="verify-input" inputmode="text" autocomplete="off"
+               placeholder="Enter EchoprintOS Record ID (ECP…) or 64-hex hash" />
+        <button id="verify-btn" type="submit">Verify</button>
+      </form>
+      <div id="verify-result" class="muted" style="margin-top:10px;"></div>
+    </section>
 
-  <!-- RECENT -->
-  <section class="card">
-    <div class="row" style="gap:8px;align-items:center">
-      <strong>Recent</strong>
-      <select id="platform"><option value="">All</option><option>Substack</option><option>LinkedIn</option><option>X</option><option>Instagram</option><option>YouTube</option><option>TikTok</option></select>
-      <input id="search" placeholder="Search title…">
-      <label class="muted" style="display:flex;gap:6px;align-items:center"><input id="imgonly" type="checkbox">with image only</label>
-      <button id="refresh">Refresh</button>
-    </div>
-    <div id="list" class="grid" style="margin-top:10px"></div>
-    <div class="row" style="justify-content:center"><button id="more">Load more</button></div>
-  </section>
-</div>
+    <!-- Recent -->
+    <section id="recent" class="pane">
+      <h2>Recent</h2>
+      <div id="recent-list" class="cards"></div>
+    </section>
+  </div>
 
-<!-- Certificate overlay -->
-<div id="certOverlay"><div id="certPane"></div></div>
+  <!-- Card template -->
+  <template id="card-template">
+    <article class="card">
+      <header>
+        <h3 class="title"></h3>
+        <small class="ecp"></small>
+      </header>
+      <dl class="meta">
+        <dt>Hash</dt><dd class="hash"></dd>
+        <dt>Timestamp</dt><dd class="ts"></dd>
+      </dl>
+      <nav class="actions">
+        <button class="open-post"      hidden>Open post</button>
+        <button class="view-image"     hidden>View image</button>
+        <button class="open-in-verify">Open in Verify</button>
+        <button class="view-cert">View certificate</button>
+        <button class="download-json">Download JSON</button>
+        <button class="download-cert">Download certificate</button>
+      </nav>
+    </article>
+  </template>
 
-<script type="module">
-/*** CONFIG — fill these two lines ***/
-const SUPABASE_URL  = 'https://cyndhzyfaffprdebclnw.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
-/*************************************/
-
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
-
-// ---------------- helpers ----------------
-const $=id=>document.getElementById(id);
-const isHex64=s=>/^[a-f0-9]{64}$/i.test((s||'').trim());
-const isUUID=s=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test((s||'').trim());
-const isURL=s=>/^https?:\/\//i.test((s||'').trim());
-const iso=t=>t?new Date(t).toISOString():'';
-const pick=(r,keys)=>{for(const k of keys){if(r&&r[k]!=null)return r[k]}return null};
-const titleOf=r=>pick(r,['title','post_title','caption','text','name'])||'Untitled';
-const linkOf=r=>pick(r,['permalink','perma_link','link','document_url','url']);
-const imgOf=r=>pick(r,['url','image_url','media_url','file_url','photo_url']);
-const tsRaw=r=>pick(r,['ots_attested_at','sent_at','created_at']); // OTS → sent_at → created_at
-const tsLab=r=>r?.ots_attested_at?'Timestamp (OTS)':(r?.sent_at?'Published':'Recorded');
-const recId=r=>pick(r,['record_id','id']);
-const ecp=r=>{const v=(recId(r)||'').toString();return v?'ECP-'+v.replace(/-/g,'').slice(0,12).toUpperCase():''};
-const dt=r=>(iso(tsRaw(r))||'').replace('T',' ').slice(0,19);
-const REC=new Map();
-
-// ---------------- render ----------------
-function cardBody(r){
-  const id=recId(r)||'', hash=r.hash||'', link=linkOf(r), img=imgOf(r);
-  return `
-    <div class="muted" style="font-size:13px">Record ID: ${id} <span style="opacity:.65">(${ecp(r)})</span></div>
-    <div class="muted" style="font-size:13px">${tsLab(r)}: ${dt(r)||''}</div>
-    ${hash?`<div class="muted" style="margin-top:6px">hash</div><div style="word-break:break-all">${hash}</div>`:''}
-    <div class="row" style="margin-top:6px">
-      ${link?`<a href="${link}" target="_blank">Open post</a>`:''}
-      ${img?`<a href="${img}" target="_blank">View image</a>`:''}
-      ${hash?`<a href="#verify" data-action="open-verify" data-value="${hash}">Open in Verify</a>`:''}
-      <a href="#" data-action="cert" data-key="${id}">View certificate</a>
-      <a href="#" data-action="json" data-key="${id}">Download JSON</a>
-    </div>
-    <div id="x-${id}" style="display:none;margin-top:10px"></div>`;
-}
-function postCard(r){
-  return `<div class="card">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-      <strong>${titleOf(r)}</strong>
-      <div>${r.platform?`<span class="pill">${r.platform}</span>`:''}<span class="pill">${dt(r)||''}</span></div>
-    </div>${cardBody(r)}
-  </div>`;
-}
-function renderVerify(rows){
-  const out=$('out');
-  if(!rows?.length){ out.innerHTML='<div class="muted">No records found.</div>'; return }
-  out.innerHTML = rows.map(r=>`<div class="card"><strong>${titleOf(r)}</strong>${cardBody(r)}</div>`).join('');
-}
-
-// ---------------- actions ----------------
-const overlay=$('certOverlay'), pane=$('certPane');
-function openCertificate(r){
-  const data={record_id:recId(r),title:titleOf(r),hash:r.hash||null,platform:r.platform||null,
-              permalink:linkOf(r),url:imgOf(r),ts:tsRaw(r)};
-  pane.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2>Echoprint Certificate</h2>
-      <button id="closeCert" style="border:0;background:#eee;padding:6px 10px;border-radius:8px;cursor:pointer">Close</button>
-    </div>
-    ${data.url?`<img src="${data.url}" alt="" style="margin:10px 0">`:''}
-    <div><strong>Title:</strong> ${data.title}</div>
-    <div><strong>Record ID:</strong> ${data.record_id||''} <span style="opacity:.65">(${ecp(r)})</span></div>
-    <div><strong>SHA-256:</strong> <code>${data.hash||'N/A'}</code></div>
-    <div><strong>${tsLab(r)}:</strong> ${iso(data.ts)}</div>
-    <div class="row" style="margin-top:10px"><button id="btnJSON">Download JSON</button></div>`;
-  overlay.style.display='block';
-  $('closeCert').onclick=()=>overlay.style.display='none';
-  $('btnJSON').onclick =()=>downloadJSON(data);
-  overlay.onclick=e=>{if(e.target===overlay) overlay.style.display='none'}
-}
-function downloadJSON(n){
-  const cert={schema:'echoprint.v1',record:{record_id:n.record_id||null,title:n.title||null,hash:n.hash||null,
-    platform:n.platform||null,permalink:n.permalink||null,url:n.url||null,sent_at:n.ts||null},
-    proof:{hash_algo:'sha-256',generated_at:new Date().toISOString()}};
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(cert,null,2)],{type:'application/json'}));
-  a.download=`${(n.record_id||n.hash||'echoprint').slice(0,16)}.echoprint.json`; a.click(); URL.revokeObjectURL(a.href);
-}
-document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-action]'); if(!t) return; e.preventDefault();
-  const r=REC.get(t.dataset.key); const a=t.dataset.action;
-  if(a==='open-verify'){ $('q').value=t.dataset.value; $('btnVerify').click(); return }
-  if(a==='cert'&&r) openCertificate(r);
-  if(a==='json'&&r) downloadJSON({record_id:recId(r),title:titleOf(r),hash:r.hash,platform:r.platform,permalink:linkOf(r),url:imgOf(r),ts:tsRaw(r)});
-});
-
-// ---------------- data ----------------
-let page=0,pageSize=12,lastKey=''; const list=$('list');
-async function fetchPosts(reset=false){
-  const p=$('platform').value.trim(), s=$('search').value.trim(), i=$('imgonly').checked;
-  const k=JSON.stringify({p,s,i}); if(reset||k!==lastKey){page=0;list.innerHTML='';lastKey=k}
-  let q=supabase.from('echoprints').select('*');
-  if(p) q=q.eq('platform',p);
-  if(s) q=q.or(['title','post_title','caption','text'].map(c=>`${c}.ilike.%${s}%`).join(','));
-  if(i) q=q.or('url.not.is.null,image_url.not.is.null,media_url.not.is.null,file_url.not.is.null,photo_url.not.is.null');
-  q=q.order('created_at',{ascending:false}).range(page*pageSize,page*pageSize+pageSize-1);
-  const {data,error}=await q;
-  if(error){list.innerHTML=`<div class="muted">Error: ${error.message}</div>`;return}
-  (data||[]).forEach(r=>REC.set(recId(r),r));
-  if(!data?.length && page===0){list.innerHTML='<div class="muted">No posts yet.</div>';return}
-  list.insertAdjacentHTML('beforeend',data.map(postCard).join('')); page++;
-}
-$('refresh').onclick=()=>fetchPosts(true);
-$('more').onclick=()=>fetchPosts(false);
-
-// Verify
-$('btnVerify').onclick=async ()=>{
-  const v=$('q').value.trim(); const out=$('out');
-  if(!v){out.innerHTML='<div class="muted">Enter something to verify.</div>';return}
-  let data=null,error=null;
-  if(isHex64(v)){({data,error}=await supabase.from('echoprints').select('*').eq('hash',v).limit(5))}
-  else if(isURL(v)){({data,error}=await supabase.from('echoprints').select('*').or(`permalink.eq.${encodeURIComponent(v)},perma_link.eq.${encodeURIComponent(v)}`).limit(5))}
-  else if(isUUID(v)){({data,error}=await supabase.from('echoprints').select('*').eq('record_id',v).limit(5))}
-  else if(/^ECP[-\s]?([A-Z0-9]{8,})$/i.test(v)){
-    const r=await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(200);
-    data=(r.data||[]).filter(row=>ecp(row).toUpperCase().replace(/\s+/g,'')===v.toUpperCase().replace(/\s+/g,''));
-  }else{({data,error}=await supabase.from('echoprints').select('*').ilike('title',`%${v}%`).limit(5))}
-  (data||[]).forEach(r=>REC.set(recId(r),r));
-  out.innerHTML=error?`<div class="muted">Error: ${error.message}</div>`:''; if(!error) renderVerify(data||[]);
-};
-$('btnRecent').onclick=async ()=>{
-  const {data,error}=await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(10);
-  (data||[]).forEach(r=>REC.set(recId(r),r));
-  $('out').innerHTML=error?`<div class="muted">Error: ${error.message}</div>`:''; if(!error) renderVerify(data);
-};
-$('btnClear').onclick=()=>{$('q').value='';$('out').innerHTML=''};
-
-// boot
-fetchPosts(true); $('btnRecent').click();
-</script>
+  <!-- Load environment, then app code (same folder, so use ./) -->
+  <script src="./env.js?v=34"></script>
+  <script type="module" src="./app.js?v=34"></script>
 </body>
 </html>
