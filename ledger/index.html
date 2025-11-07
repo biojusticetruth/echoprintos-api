@@ -1,116 +1,74 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EchoprintOS — Generate • Verify • Posts</title>
-<link rel="stylesheet" href="./assets/css/app.css?v=1">
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <h1>EchoprintOS</h1>
-    <nav>
-      <a class="tab" href="#generate" data-tab="generate">Generate</a>
-      <a class="tab" href="#verify"   data-tab="verify">Verify</a>
-      <a class="tab" href="#posts"    data-tab="posts">Posts</a>
-    </nav>
-  </header>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EchoprintOS — Ledger</title>
 
-  <!-- GENERATE -->
-  <section id="generate" class="card">
-    <h2 class="h2">Generate an Echoprint</h2>
-    <div class="col2">
-      <div>
-        <label class="muted">Title (optional)</label>
-        <input id="genTitle" type="text" placeholder="Untitled">
-      </div>
-      <div>
-        <label class="muted">Platform (optional)</label>
-        <select id="genPlatform">
-          <option value="">—</option>
-          <option>Substack</option><option>LinkedIn</option><option>X</option>
-          <option>Instagram</option><option>YouTube</option>
-        </select>
-      </div>
-      <div>
-        <label class="muted">Permalink (optional)</label>
-        <input id="genPermalink" type="url" placeholder="https://…">
-      </div>
-      <div>
-        <label class="muted">Media URL (optional)</label>
-        <input id="genURL" type="url" placeholder="https://…/image.jpg">
-      </div>
-    </div>
+<style>
+  body{font-family:system-ui,Inter,Arial;margin:24px;max-width:920px}
+  h2{margin-top:28px}
+  .row{border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0}
+  .meta{font-size:12px;color:#666;margin-top:6px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button,a.btn{padding:6px 10px;border:1px solid #bbb;border-radius:8px;background:#fff;text-decoration:none;cursor:pointer}
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
+  #overlay .panel{background:#fff;max-width:700px;width:90%;padding:16px;border-radius:12px;max-height:80vh;overflow:auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:720px){.grid{grid-template-columns:1fr}}
+  input[type="text"],input[type="file"]{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px}
+</style>
 
-    <div class="card inner">
-      <div class="col2">
-        <div>
-          <label class="muted">Hash from TEXT (browser SHA-256)</label>
-          <textarea id="genText" placeholder="Paste any content to hash…"></textarea>
-          <div class="row"><button id="btnHashText">Hash Text → SHA-256</button></div>
-        </div>
-        <div>
-          <label class="muted">Hash from FILE (exact file bytes)</label>
-          <input id="genFile" type="file" accept="*/*">
-          <div class="row"><button id="btnHashFile">Hash File → SHA-256</button></div>
-        </div>
-      </div>
-      <div class="mt8">
-        <label class="muted">Or paste an existing hash (64 hex)</label>
-        <input id="genHash" type="text" placeholder="6f1a…">
-      </div>
-    </div>
+<h1>🧾 EchoprintOS</h1>
 
-    <div class="row">
-      <button id="btnInsert">Insert into EchoprintOS</button>
-      <button id="btnClearGen">Clear</button>
-    </div>
-    <div id="genMsg" class="muted mt8"></div>
+<div class="grid">
+  <!-- Generate -->
+  <section class="row">
+    <h2>Generate</h2>
+    <label>Title</label>
+    <input id="genTitle" type="text" placeholder="Short title" />
+    <div style="height:8px"></div>
+    <label>Text (hash this)</label>
+    <input id="genText" type="text" placeholder="Paste text to hash (optional if using file)" />
+    <div style="height:8px"></div>
+    <label>Or File</label>
+    <input id="genFile" type="file" />
+    <div style="height:8px"></div>
+    <label>Permalink (optional)</label>
+    <input id="genLink" type="text" placeholder="https://…" />
+    <div style="height:8px"></div>
+    <button id="genBtn">Hash & Insert</button>
+    <div id="genMsg" class="meta"></div>
   </section>
 
-  <!-- VERIFY -->
-  <section id="verify" class="card">
-    <h2 class="h2">Verify an Echoprint</h2>
-    <label class="muted">Paste a SHA-256 hash or a permalink</label>
-    <input id="q" type="text" placeholder="e.g., 6f1a… or https://substack.com/p/…">
-    <div class="row">
-      <button id="btnVerify">Verify</button>
-      <button id="btnRecent" title="Show recent">Recent</button>
-      <button id="btnClear"  title="Clear">Clear</button>
-    </div>
-    <div id="out" class="mt14"></div>
-  </section>
-
-  <!-- POSTS (live feed) -->
-  <section id="posts" class="card">
-    <h2 class="h2">Echoprinted Posts</h2>
-    <div class="row gap8 mt12">
-      <select id="platform">
-        <option value="">All platforms</option>
-        <option>Substack</option><option>LinkedIn</option><option>X</option>
-        <option>Instagram</option><option>YouTube</option>
-      </select>
-      <input id="search" type="text" placeholder="Search title…">
-      <label class="checkbox">
-        <input id="imgonly" type="checkbox"> with image only
-      </label>
-      <button id="refresh">Refresh</button>
-    </div>
-    <div id="list" class="grid"></div>
-    <div class="row center">
-      <button id="more">Load more</button>
-    </div>
+  <!-- Verify (accepts ECP | hash | UUID) -->
+  <section class="row" id="verifySection">
+    <h2>Verify</h2>
+    <label>Enter EchoprintOS ID (ECP …), 64-hex hash, or UUID</label>
+    <input id="verifyKey" type="text" placeholder="ECP 123…, or 64-hex, or UUID" />
+    <div style="height:8px"></div>
+    <button id="verifyBtn">Verify</button>
+    <div id="verifyOut" class="meta"></div>
   </section>
 </div>
 
-<!-- certificate overlay (same page) -->
-<div id="certOverlay"><div id="certPane"></div></div>
+<!-- Recent -->
+<section>
+  <h2>Recent</h2>
+  <div id="recent"></div>
+</section>
 
-<!-- ENV (defines window.__ENV with Supabase URL + anon key) -->
-<script src="./env.js?v=24"></script>
+<!-- Certificate overlay -->
+<div id="overlay">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Certificate</strong>
+      <button onclick="document.getElementById('overlay').style.display='none'">Close</button>
+    </div>
+    <pre id="certPre" style="white-space:pre-wrap"></pre>
+  </div>
+</div>
 
-<!-- App -->
-<script type="module" src="./app.js?v=24"></script>
-</body>
+<!-- Only these two -->
+<script src="./env.js?v=33"></script>
+<script type="module" src="./app.js?v=33"></script>
 </html>
