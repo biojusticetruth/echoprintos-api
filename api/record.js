@@ -1,55 +1,36 @@
-// api/record.js
-const crypto = require("crypto");
-
-module.exports = async (req, res) => {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
-  const auth = req.headers.authorization || "";
-  if (auth !== `Bearer ${process.env.ECHOPRINT_API_KEY}`) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const { platform, url, title, content, publishedAt } = req.body || {};
-  if (!platform || !url || !publishedAt) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  const canonical = [
-    platform,
-    title || "",
-    (content || "").replace(/\s+/g, " ").trim(),
-    (url || "").toLowerCase(),
-    new Date(publishedAt).toISOString()
-  ].join("|");
-
-  const hash = crypto.createHash("sha256").update(canonical).digest("hex");
-  const runId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
-  const ts = new Date().toISOString();
-
-  // Optional Supabase write
+// /api/record.js (Next.js / Vercel)
+export default async function handler(req, res) {
   try {
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const resp = await fetch(`${process.env.SUPABASE_URL}/rest/v1/records`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Prefer": "return=representation",
-          "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY,
-          "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-        },
-        body: JSON.stringify([{
-          platform, url, title, content,
-          published_at: new Date(publishedAt).toISOString(),
-          hash, run_id: runId, created_at: ts
-        }])
-      });
-      if (!resp.ok) return res.status(500).json({ error: "Supabase insert failed", detail: await resp.text() });
-      const [row] = await resp.json();
-      return res.status(200).json({ id: row.id, hash, runId, ts });
-    }
-  } catch (e) {
-    return res.status(500).json({ error: "Supabase error", detail: String(e) });
-  }
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  return res.status(200).json({ id: null, hash, runId, ts });
-};
+    // 🔐 AUTH DEBUG BLOCK (the snippet you pasted)
+    const auth = req.headers.authorization || '';
+    const token = (auth.startsWith('Bearer ') ? auth.slice(7) : auth).trim();
+    const expected = (process.env.ECHOPRINTS_API_KEY || '').trim();
+
+    console.log('auth.debug', {
+      gotBearer: auth.startsWith('Bearer '),
+      tokenLen: token.length,
+      expectedLen: expected.length
+    });
+
+    if (!token || token !== expected) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // ✅ If you get here, auth passed
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    if (!body || !body.url || !body.text) {
+      return res.status(400).json({ error: 'Missing required fields: text and url' });
+    }
+
+    // TODO: your Supabase insert goes here
+    // const { data, error } = await supabase.from('echoprints').insert({...}).select();
+    // if (error) return res.status(500).json({ error: 'Supabase insert failed', detail: error.message });
+
+    return res.status(200).json({ ok: true, msg: 'auth passed; stub success' });
+  } catch (e) {
+    console.error('record.handler.crash', e);
+    return res.status(500).json({ error: 'Handler crashed', detail: e?.message });
+  }
+}
