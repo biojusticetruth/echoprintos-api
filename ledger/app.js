@@ -1,26 +1,26 @@
 /* EchoprintOS — Generate • Verify • Posts (with hash guard & certificate overlay) */
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-/* --- ENV (from env.js) --- */
+// --- ENV ---
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__ENV || {}
 if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
   alert('Missing SUPABASE env'); throw new Error('Missing SUPABASE env')
 }
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-/* --- helpers --- */
+// --- helpers ---
 const $  = (id)=>document.getElementById(id)
-const qs = (s)=>document.querySelector(s)
 const iso = t => t ? new Date(t).toISOString() : ''
 let page=0, pageSize=12, lastKey=''
 const REC=new Map()
 
-/* --- sha256 (browser) --- */
+// --- sha256 (browser) ---
 const toHex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')
 async function sha256OfText(txt){ const b=new TextEncoder().encode(txt); return toHex(await crypto.subtle.digest('SHA-256', b)) }
 async function sha256OfFile(file){ const b=await file.arrayBuffer();   return toHex(await crypto.subtle.digest('SHA-256', b)) }
 
-/* --- normalizers --- */
+// --- normalizers (support old column names) ---
 const pick  = (r,keys)=>{ for(const k of keys){ if(r?.[k]!=null) return r[k] } return null }
 const titleOf = r => pick(r,['title','post_title','name','caption','text']) || 'Untitled'
 const linkOf  = r => pick(r,['permalink','perma_link','link','document_url','doc_url','file_url','url'])
@@ -28,7 +28,7 @@ const imgOf   = r => pick(r,['url','image_url','image','media_url','media','phot
 const tsOf    = r => pick(r,['timestamp_iso','sent_at','timestamp','created_at'])
 const recIdOf = r => pick(r,['record_id','id'])
 
-/* --- certificate JSON / PNG / overlay --- */
+// --- certificate JSON / PNG / overlay ---
 function downloadJSON(n){
   const base = location.pathname.includes('/ledger') ? '/ledger/' : '/'
   const cert={schema:'echoprint.v1',
@@ -89,7 +89,7 @@ function openCertificate(r){
   $('btnCertPNG').onclick=()=>downloadCertificatePNG(n)
 }
 
-/* --- shared card body --- */
+// --- shared card body (used by Verify + Posts) ---
 function cardBody(r){
   const n = { record_id:recIdOf(r), title:titleOf(r), hash:r.hash||null,
               platform:r.platform||null, permalink:linkOf(r), url:imgOf(r), ts:tsOf(r) }
@@ -129,9 +129,9 @@ function expandCard(r, mountId){
   mount.style.display='block'
 }
 
-/* --- global click (cards) --- */
+// --- global click handlers (cards) ---
 document.addEventListener('click',(e)=>{
-  const t=e.target.closest?.('[data-action]'); if(!t) return
+  const t=e.target.closest('[data-action]'); if(!t) return
   e.preventDefault()
   const n=REC.get(t.dataset.key); if(!n) return
   if(t.dataset.action==='expand') expandCard(n,'x-'+t.dataset.key)
@@ -140,7 +140,7 @@ document.addEventListener('click',(e)=>{
   if(t.dataset.action==='png')    downloadCertificatePNG(n)
 })
 
-/* --- tabs: show one panel at a time --- */
+// --- tabs: show one panel at a time ---
 function setTab(tab){
   ['generate','verify','posts'].forEach(id=>{ const el=$(id); if(el) el.hidden=(id!==tab) })
   document.querySelectorAll('.tab').forEach(a=>a.classList.toggle('active', a.dataset.tab===tab))
@@ -149,10 +149,9 @@ function setTab(tab){
 function route(){ const tab=(location.hash||'#verify').slice(1)||'verify'; setTab(tab); if(tab==='posts'){ fetchPosts(true) } }
 addEventListener('hashchange', route)
 
-/* --- VERIFY --- */
+// --- VERIFY ---
 const out = $('out')
 function renderVerify(rows){
-  if(!out) return
   if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
   out.innerHTML = rows.map(r=>`<div class="card"><strong>${titleOf(r)}</strong>${cardBody(r)}</div>`).join('')
 }
@@ -174,7 +173,7 @@ $('btnRecent')?.addEventListener('click', async ()=>{
 })
 $('btnClear')?.addEventListener('click', ()=>{ $('q').value=''; out.innerHTML='' })
 
-/* --- POSTS (live feed) --- */
+// --- POSTS (live feed) ---
 const list = $('list')
 function postCard(r){
   const dt = tsOf(r) ? iso(tsOf(r)).replace('T',' ').slice(0,19) : ''
@@ -200,9 +199,9 @@ async function fetchPosts(reset=false){
   list.insertAdjacentHTML('beforeend', data.map(postCard).join('')); page++
 }
 $('refresh')?.addEventListener('click', ()=>fetchPosts(true))
-$('more')?.addEventListener('click', ()=>fetchPosts(false))
+$('more')?.addEventListener('click',    ()=>fetchPosts(false))
 
-/* --- GENERATE (guard requires 64-hex hash) --- */
+// --- GENERATE (guard requires 64-hex hash) ---
 const isHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim())
 function updateInsertState(){ const ok=isHex64($('genHash')?.value); const btn=$('btnInsert'); if(btn) btn.disabled=!ok }
 ;['genHash','genText','genFile'].forEach(id=>$(id)?.addEventListener('input', updateInsertState))
@@ -241,7 +240,7 @@ $('btnInsert')?.addEventListener('click', async (e)=>{
   }
 })
 
-/* --- boot --- */
+// --- boot ---
 if(!location.hash) location.hash = '#verify'
 route()
 updateInsertState()
