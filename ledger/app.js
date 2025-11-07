@@ -1,159 +1,121 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__ENV ?? {};
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__ENV || {};
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  alert('Fill /env.js with your Project URL + anon key.'); throw new Error('missing env');
+  console.error('Missing SUPABASE_URL / SUPABASE_ANON_KEY in env.js');
 }
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ——— Helpers
-const isHex64 = (s) => /^[0-9a-fA-F]{64}$/.test((s||'').trim());
-const isUUID  = (s) => /^[0-9a-fA-F-]{36}$/.test((s||'').trim());
-const isECP   = (s) => /^ECP\s+\d{6,}$/.test((s||'').trim());
+// Helpers
+const $ = (sel, root=document) => root.querySelector(sel);
+const isHex64 = (s) => /^[a-f0-9]{64}$/i.test(s);
+const isUUID  = (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+const ecpFrom = (row) => 'ECP-' + (row.record_id||row.id||'').toString().replace(/-/g,'').slice(0,8).toUpperCase();
+const tsFrom  = (row) => row.sent_at || row.created_at || ''; // Make rows can set sent_at; DB always sets created_at
+const fmtTS   = (s) => s ? new Date(s).toISOString().replace('T',' ').replace('Z',' UTC') : '—';
 
-// ECP (digits only) derived from the first 16 hex chars of UUID
-const ecpFromUUID = (uuid) => {
-  const hex = uuid.replace(/-/g,'').slice(0,16);
-  const n = BigInt('0x' + hex);
-  return 'ECP ' + n.toString(10);
-};
+function renderCard(row) {
+  const tpl = $('#card-template').content.cloneNode(true);
+  $('.title', tpl).textContent = row.title || '(untitled)';
+  $('.ecp',   tpl).textContent = ecpFrom(row);
+  $('.hash',  tpl).textContent = row.hash || '—';
+  $('.ts',    tpl).textContent = fmtTS(tsFrom(row));
 
-const sha256Hex = async (bytes) => {
-  const buf = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-};
+  // Buttons
+  const btnPost = $('.open-post', tpl);
+  const btnImg  = $('.view-image', tpl);
+  if (row.permalink) { btnPost.hidden = false; btnPost.onclick = () => window.open(row.permalink, '_blank'); }
+  if (row.url)       { btnImg.hidden  = false; btnImg.onclick  = () => window.open(row.url, '_blank'); }
 
-const dl = (filename, text) => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], {type:'application/json'}));
-  a.download = filename; a.click(); URL.revokeObjectURL(a.href);
-};
+  $('.open-in-verify', tpl).onclick = () => {
+    $('#verify-input').value = row.hash || ecpFrom(row);
+    $('#verify-form').dispatchEvent(new Event('submit', {cancelable:true}));
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
 
-// ——— Generate
-document.getElementById('genBtn').onclick = async () => {
-  const title = document.getElementById('genTitle').value?.trim() || 'Untitled';
-  const text  = document.getElementById('genText').value;
-  const file  = document.getElementById('genFile').files[0];
-  const link  = document.getElementById('genLink').value?.trim() || null;
-  const msgEl = document.getElementById('genMsg');
-
-  if (!text && !file) { msgEl.textContent = 'Add text or choose a file.'; return; }
-  let bytes = file ? new Uint8Array(await file.arrayBuffer())
-                   : new TextEncoder().encode(text);
-  const hash = await sha256Hex(bytes);
-  const sent_at = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('echoprints')
-    .insert([{ title, hash, permalink: link, sent_at }])
-    .select()
-    .single();
-
-  if (error) { msgEl.textContent = 'Insert failed: ' + error.message; return; }
-  msgEl.textContent = `Saved ${ecpFromUUID(data.record_id)} • ${hash.slice(0,8)}…`;
-  await loadRecent();
-};
-
-// ——— Verify (ECP | hash | UUID)
-document.getElementById('verifyBtn').onclick = async () => {
-  const key = document.getElementById('verifyKey').value.trim();
-  const out = document.getElementById('verifyOut');
-  if (!key) return;
-
-  try {
-    let rec = null;
-
-    if (isHex64(key)) {
-      const { data, error } = await supabase.from('echoprints').select().eq('hash', key).limit(1);
-      if (error) throw error; rec = data?.[0] || null;
-
-    } else if (isUUID(key)) {
-      const { data, error } = await supabase.from('echoprints').select().eq('record_id', key).limit(1);
-      if (error) throw error; rec = data?.[0] || null;
-
-    } else if (isECP(key)) {
-      // scan in pages until found (simple, works with anon SELECT)
-      let from = 0, size = 200;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { data, error } = await supabase
-          .from('echoprints')
-          .select('id,record_id,title,hash,created_at,permalink,url,platform,sent_at')
-          .order('created_at', { ascending:false })
-          .range(from, from + size - 1);
-        if (error) throw error;
-        if (!data.length) break;
-        rec = data.find(r => ecpFromUUID(r.record_id) === key) || null;
-        if (rec) break;
-        from += size;
-      }
-    } else {
-      out.textContent = 'Enter ECP ID, 64-hex hash, or UUID.';
-      return;
-    }
-
-    if (!rec) { out.textContent = 'No match.'; return; }
-    out.textContent = `✓ ${ecpFromUUID(rec.record_id)} • ${rec.hash}`;
-  } catch (e) {
-    out.textContent = String(e.message || e);
-  }
-};
-
-// ——— Recent
-async function loadRecent() {
-  const list = document.getElementById('recent');
-  list.innerHTML = 'Loading…';
-
-  const { data, error } = await supabase
-    .from('echoprints')
-    .select('id,record_id,title,hash,created_at,permalink,url,platform,sent_at')
-    .order('created_at', { ascending:false })
-    .limit(50);
-
-  if (error) { list.textContent = error.message; return; }
-
-  list.innerHTML = '';
-  (data||[]).forEach(row => {
-    const card = document.createElement('div');
-    card.className = 'row';
-    const ecp = ecpFromUUID(row.record_id);
-    const ts  = row.created_at || row.sent_at;
-
-    card.innerHTML = `
-      <div><strong>${row.title || '(untitled)'}</strong></div>
-      <div class="meta">${ecp}</div>
-      <div class="meta">hash: ${row.hash || '(none)'} · time: ${ts || '(n/a)'}${row.platform?` · ${row.platform}`:''}</div>
-      <div class="btns">
-        ${row.permalink ? `<a class="btn" target="_blank" href="${row.permalink}">Open post</a>`:''}
-        ${row.url ? `<a class="btn" target="_blank" href="${row.url}">View image</a>`:''}
-        <button class="btn openVerify">Open in Verify</button>
-        <button class="btn viewCert">View certificate</button>
-        <button class="btn dlJson">Download JSON</button>
-        <button class="btn dlCert">Download certificate</button>
-      </div>
-    `;
-
-    // wire buttons
-    card.querySelector('.openVerify').onclick = () => {
-      const v = document.getElementById('verifyKey');
-      v.value = row.hash || row.record_id; // you can paste ECP too
-      document.getElementById('verifySection').scrollIntoView({behavior:'smooth'});
+  $('.view-cert', tpl).onclick = () => {
+    const cert = {
+      echoprint_id: ecpFrom(row),
+      record_id: row.record_id || row.id,
+      hash: row.hash,
+      timestamp: tsFrom(row),
+      platform: row.platform || null,
+      permalink: row.permalink || null,
+      url: row.url || null
     };
+    alert(JSON.stringify(cert, null, 2));
+  };
 
-    const certObj = {
-      echoprint: { ecp, record_id: row.record_id, hash: row.hash, timestamp: ts },
-      source: { title: row.title, platform: row.platform || null, permalink: row.permalink || null, url: row.url || null }
+  $('.download-json', tpl).onclick = () => {
+    const blob = new Blob([JSON.stringify(row, null, 2)], {type:'application/json'});
+    const a = Object.assign(document.createElement('a'), {download: `${ecpFrom(row)}.json`, href: URL.createObjectURL(blob)});
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  $('.download-cert', tpl).onclick = () => {
+    const cert = {
+      echoprint_id: ecpFrom(row),
+      record_id: row.record_id || row.id,
+      hash: row.hash,
+      timestamp: tsFrom(row)
     };
+    const blob = new Blob([JSON.stringify(cert, null, 2)], {type:'application/json'});
+    const a = Object.assign(document.createElement('a'), {download: `${ecpFrom(row)}-certificate.json`, href: URL.createObjectURL(blob)});
+    a.click(); URL.revokeObjectURL(a.href);
+  };
 
-    card.querySelector('.viewCert').onclick = () => {
-      document.getElementById('certPre').textContent = JSON.stringify(certObj, null, 2);
-      document.getElementById('overlay').style.display = 'flex';
-    };
-    card.querySelector('.dlJson').onclick = () => dl(`${ecp.replace(' ','_')}.json`, JSON.stringify(row, null, 2));
-    card.querySelector('.dlCert').onclick = () => dl(`${ecp.replace(' ','_')}_certificate.json`, JSON.stringify(certObj, null, 2));
-
-    list.appendChild(card);
-  });
+  return tpl;
 }
 
+// Fetch recent
+async function loadRecent() {
+  const list = $('#recent-list');
+  list.innerHTML = '<div class="muted">Loading…</div>';
+  const { data, error } = await supabase
+    .from('echoprints')
+    .select('id,record_id,title,hash,permalink,url,platform,created_at,sent_at')
+    .order('created_at', { ascending: false })
+    .limit(24);
+
+  if (error) { list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return; }
+  list.innerHTML = '';
+  (data||[]).forEach(row => list.appendChild(renderCard(row)));
+}
+
+// Verify handler (accepts 64-hex hash, UUID, or ECP-prefix)
+$('#verify-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const out = $('#verify-result');
+  const v   = ($('#verify-input').value||'').trim();
+  if (!v) { out.textContent = 'Enter a hash or EchoprintOS Record ID.'; return; }
+
+  let q = supabase.from('echoprints').select('*').limit(1);
+  if (isHex64(v)) {
+    q = q.eq('hash', v);
+  } else if (/^ECP/i.test(v)) {
+    const suffix = v.replace(/^ECP[-\s]?/i,'').replace(/[^a-f0-9]/ig,'').slice(0,8);
+    q = q.ilike('record_id', `${suffix}%`);
+  } else if (isUUID(v)) {
+    q = q.eq('record_id', v);
+  } else {
+    out.textContent = 'Not a 64-hex hash, UUID, or ECP code.'; return;
+  }
+
+  const { data, error } = await q;
+  if (error) { out.textContent = `Error: ${error.message}`; return; }
+  if (!data || data.length === 0) { out.textContent = 'No match.'; return; }
+
+  const row = data[0];
+  out.innerHTML = `
+    <b>${row.title || '(untitled)'}</b><br/>
+    <small>${ecpFrom(row)}</small><br/>
+    Hash: <code>${row.hash || '—'}</code><br/>
+    Timestamp: ${fmtTS(tsFrom(row))}<br/>
+    ${row.permalink ? `<a href="${row.permalink}" target="_blank">Open post</a><br/>` : ''}
+    ${row.url ? `<a href="${row.url}" target="_blank">View image</a><br/>` : ''}
+  `;
+});
+
+// Boot
 loadRecent();
+console.log('EchoprintOS page booted.');
