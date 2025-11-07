@@ -25,6 +25,14 @@
   .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
   @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  /* Overlay (used by Quick view + Certificate) */
+  .cert-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
+  .cert-card{background:#fff;color:#111;max-width:720px;width:min(720px,100%);max-height:85vh;overflow:auto;border-radius:12px;border:1px solid #ddd;padding:24px}
+  .cert-card h1{font-size:22px;margin:0 0 12px}
+  .cert-card .m{color:#666;font-size:13px}
+  .cert-card .row{margin:8px 0}
+  .cert-actions{display:flex;gap:8px;margin-top:12px}
+  .cert-btn{padding:8px 12px;border:1px solid #ccc;border-radius:8px;background:#f8f8f8;cursor:pointer}
 </style>
 
 <div class="wrap">
@@ -71,20 +79,28 @@
   </section>
 </div>
 
-<!-- public env (your URL + anon key) -->
-<script src="env.js"></script>
+<!-- Overlay root -->
+<div id="certOverlay" class="cert-backdrop" role="dialog" aria-modal="true"></div>
+
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__ENV || {}
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ alert('Missing SUPABASE env'); }
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-  const $ = (id)=>document.getElementById(id)
+  /* ===== SUPABASE (PASTE YOUR VALUES) ===== */
+  const supabase = createClient(
+    'https://cyndhzyfaffprdebclnw.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c'
+  )
+  /* ======================================= */
+
+  // helpers
+  const $  = (id)=>document.getElementById(id)
   const qs = (s)=>document.querySelector(s)
-  const out = $('out'), list = $('list')
+  const out = $('out'), list = $('list'), overlay = $('certOverlay')
   let page=0, pageSize=12, lastKey=''
+  const REC = new Map()
+  const fmt = ts => ts ? new Date(ts).toISOString().slice(0,19).replace('T',' ') : ''
 
-  // tabs
+  // tabs/router
   function setTab(tab){
     const isVerify = tab==='verify'
     qs('#view-verify').hidden = !isVerify
@@ -95,73 +111,172 @@
   function route(){ const tab=(location.hash||'#verify').slice(1) || 'verify'; setTab(tab); if(tab==='posts'){ fetchPosts(true) } }
   window.addEventListener('hashchange', route)
 
-  // verify
+  /* ===== Overlays ===== */
+
+  // Certificate (record_id + timestamp + hash)
+  function openCertificate(r){
+    const ts = r.sent_at || r.created_at || null
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+    overlay.innerHTML = `
+      <div class="cert-card">
+        <h1>Echoprint Certificate</h1>
+        <div class="m">schema: echoprint.v1</div>
+        <div class="row"><strong>Record ID:</strong> <code>${esc(r.record_id || '')}</code></div>
+        <div class="row"><strong>Timestamp:</strong> ${ts ? new Date(ts).toISOString() : ''}</div>
+        <div class="row"><strong>Hash (SHA-256):</strong> <code>${esc(r.hash || '')}</code></div>
+        <div class="cert-actions">
+          <button class="cert-btn" onclick="window.print()">Print</button>
+          <button class="cert-btn" id="closeCert">Close</button>
+        </div>
+      </div>`
+    overlay.style.display = 'flex'
+    $('closeCert').onclick = ()=> overlay.style.display = 'none'
+    overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
+  }
+
+  // Quick view (same trio, lighter header + shortcuts)
+  function openQuickView(r){
+    const ts = r.sent_at || r.created_at || null
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+    overlay.innerHTML = `
+      <div class="cert-card">
+        <h1>Quick view</h1>
+        <div class="row"><strong>Record ID:</strong> <code>${esc(r.record_id || '')}</code></div>
+        <div class="row"><strong>Timestamp:</strong> ${ts ? new Date(ts).toISOString() : ''}</div>
+        <div class="row"><strong>Hash (SHA-256):</strong> <code>${esc(r.hash || '')}</code></div>
+        <div class="cert-actions">
+          <button class="cert-btn" data-action="cert" data-key="${r.record_id || r.hash}">Certificate</button>
+          <button class="cert-btn" data-action="json"  data-key="${r.record_id || r.hash}">Download JSON</button>
+          <button class="cert-btn" id="closeQV">Close</button>
+        </div>
+      </div>`
+    overlay.style.display = 'flex'
+    $('closeQV').onclick = ()=> overlay.style.display = 'none'
+    overlay.onclick = (e)=>{ if(e.target === overlay) overlay.style.display = 'none' }
+  }
+
+  // JSON download (record_id + timestamp_iso + hash)
+  function downloadJSON(r){
+    const ts = r.sent_at || r.created_at || null
+    const cert = {
+      schema: "echoprint.v1",
+      record_id: r.record_id ?? null,
+      timestamp_iso: ts ? new Date(ts).toISOString() : null,
+      hash: r.hash ?? null
+    }
+    const blob = new Blob([JSON.stringify(cert, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    const base = (r.record_id || r.hash || 'echoprint').slice(0, 16)
+    a.download = `${base}.echoprint.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  // one delegated handler for kv/cert/json
+  document.addEventListener('click', (e)=>{
+    const t = e.target.closest('[data-action]'); if(!t) return
+    e.preventDefault()
+    const r = REC.get(t.dataset.key); if(!r) return
+    if(t.dataset.action==='kv')   openQuickView(r)
+    if(t.dataset.action==='cert') openCertificate(r)
+    if(t.dataset.action==='json') downloadJSON(r)
+  })
+
+  /* ===== VERIFY (shows Title + Record ID + Timestamp; no hash) ===== */
   function renderVerify(rows){
     if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
     out.innerHTML = rows.map(r=>`
       <details>
-        <summary><strong>${r.title||'Untitled'}</strong>
-          ${r.platform?`<span class="pill">${r.platform}</span>`:''}
-          ${r.sent_at?`<span class="pill">${new Date(r.sent_at).toISOString().slice(0,19).replace('T',' ')}</span>`:''}
+        <summary style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <strong>${r.title || 'Untitled'}</strong>
+          <span>${fmt(r.sent_at || r.created_at)}</span>
         </summary>
         <div style="margin-top:8px">
-          <div class="muted">hash:</div><div style="word-break:break-all">${r.hash||''}</div>
-          ${r.permalink?`<div class="muted" style="margin-top:6px">permalink:</div><div><a target="_blank" href="${r.permalink}">Open post</a></div>`:''}
-          ${r.url?`<div class="muted" style="margin-top:6px">media:</div><div><a target="_blank" href="${r.url}">View image</a></div>
-            <details style="margin-top:6px"><summary>Preview</summary>
-              <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
-            </details>`:''}
+          <div class="muted">record_id:</div>
+          <div style="word-break:break-all">${r.record_id || ''}</div>
+          ${r.perma_link?`<div class="muted" style="margin-top:6px">permalink:</div>
+                          <div><a target="_blank" href="${r.perma_link}" rel="noopener">Open post</a></div>`:''}
+          ${r.url?`<div class="muted" style="margin-top:6px">media:</div>
+                   <div><a target="_blank" href="${r.url}" rel="noopener">View image</a></div>
+                   <details style="margin-top:6px"><summary>Preview</summary>
+                     <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+                   </details>`:''}
+          <div class="row" style="margin-top:6px">
+            <a href="#" data-action="kv"   data-key="${r.record_id || r.hash}">Quick view</a>
+            <a href="#" data-action="cert" data-key="${r.record_id || r.hash}">View certificate</a>
+            <a href="#" data-action="json" data-key="${r.record_id || r.hash}">Download JSON</a>
+          </div>
         </div>
       </details>`).join('')
+    rows.forEach(r => REC.set(r.record_id || r.hash, r))
   }
+
   $('btnVerify').onclick = async ()=>{
     const v = $('q').value.trim()
-    if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink.</div>'; return }
+    if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink URL.</div>'; return }
     const isHash = /^[a-f0-9]{64}$/i.test(v)
-    const { data, error } = await supabase.from('echoprints').select('*').eq(isHash?'hash':'permalink', v).limit(5)
+    const { data, error } = await supabase.from('echoprints')
+      .select('*').eq(isHash?'hash':'perma_link', v).limit(5)
     out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
     if(!error) renderVerify(data)
   }
+
   $('btnRecent').onclick = async ()=>{
-    const { data, error } = await supabase.from('echoprints').select('*').order('sent_at',{ascending:false}).limit(10)
+    const { data, error } = await supabase.from('echoprints')
+      .select('*').order('sent_at',{ascending:false}).limit(10)
     out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
     if(!error) renderVerify(data)
   }
   $('btnClear').onclick = ()=>{ $('q').value=''; out.innerHTML='' }
 
-  // posts
+  /* ===== POSTS (shows Title + Record ID + Timestamp; no hash) ===== */
   function postCard(r){
-    const dt = r.sent_at ? new Date(r.sent_at).toISOString().slice(0,19).replace('T',' ') : ''
+    const dt = fmt(r.sent_at || r.created_at)
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>${r.title||'Untitled'}</strong>
-        <div>${r.platform?`<span class="pill">${r.platform}</span>`:''}${dt?`<span class="pill">${dt}</span>`:''}</div>
+        <strong>${r.title || 'Untitled'}</strong>
+        <div>${dt?`<span class="pill">${dt}</span>`:''}</div>
       </div>
-      <div class="muted" style="margin-top:6px">hash:</div>
-      <div style="word-break:break-all">${r.hash||''}</div>
+      <div class="muted" style="margin-top:6px">record_id:</div>
+      <div style="word-break:break-all">${r.record_id || ''}</div>
       <div class="row" style="margin-top:6px">
-        ${r.permalink?`<a target="_blank" href="${r.permalink}">Open post</a>`:''}
-        ${r.url?`<a target="_blank" href="${r.url}">View image</a>`:''}
+        ${r.perma_link?`<a target="_blank" href="${r.perma_link}" rel="noopener">Open post</a>`:''}
+        ${r.url?`<a target="_blank" href="${r.url}" rel="noopener">View image</a>`:''}
         ${r.hash?`<a href="#verify" onclick="document.getElementById('q').value='${r.hash}';document.getElementById('btnVerify').click();return false;">Open in Verify</a>`:''}
+        <a href="#" data-action="kv"   data-key="${r.record_id || r.hash}">Quick view</a>
+        <a href="#" data-action="cert" data-key="${r.record_id || r.hash}">View certificate</a>
+        <a href="#" data-action="json" data-key="${r.record_id || r.hash}">Download JSON</a>
       </div>
       ${r.url?`<details style="margin-top:8px"><summary>Preview</summary>
         <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
       </details>`:''}
     </div>`
   }
+
   async function fetchPosts(reset=false){
-    const p = $('platform').value.trim(), s = $('search').value.trim(), i = $('imgonly').checked
-    const key = JSON.stringify({p,s,i}); if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
-    let q = supabase.from('echoprints').select('*').or('permalink.not.is.null,platform.not.is.null')
-    if(p) q=q.eq('platform',p); if(s) q=q.ilike('title', `%${s}%`); if(i) q=q.not('url','is',null)
+    const p = document.getElementById('platform').value.trim()
+    const s = document.getElementById('search').value.trim()
+    const i = document.getElementById('imgonly').checked
+    const key = JSON.stringify({p,s,i})
+    if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
+
+    let q = supabase.from('echoprints').select('*').or('perma_link.not.is.null,platform.not.is.null')
+    if(p) q=q.eq('platform',p)
+    if(s) q=q.ilike('title', `%${s}%`)
+    if(i) q=q.not('url','is',null)
     q = q.order('sent_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
+
     const { data, error } = await q
     if(error){ list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return }
     if(!data || (data.length===0 && page===0)){ list.innerHTML='<div class="muted">No posts found.</div>'; return }
-    list.insertAdjacentHTML('beforeend', data.map(postCard).join('')); page++
+    list.insertAdjacentHTML('beforeend', data.map(postCard).join(''))
+    data.forEach(r => REC.set(r.record_id || r.hash, r))
+    page++
   }
-  $('refresh').onclick = ()=>fetchPosts(true)
-  $('more').onclick = ()=>fetchPosts(false)
+
+  document.getElementById('refresh').onclick = ()=>fetchPosts(true)
+  document.getElementById('more').onclick = ()=>fetchPosts(false)
 
   if(!location.hash) location.hash = '#verify'
   route()
