@@ -4,40 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EchoprintOS — Generate • Verify • Posts</title>
-<style>
-  :root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
-  *{box-sizing:border-box}
-  body{font:16px/1.5 Inter,system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:var(--fg)}
-  a{color:var(--acc);text-decoration:none}
-  .wrap{max-width:980px;margin:40px auto;padding:0 18px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  h1{font-size:22px;margin:0}
-  nav{display:flex;gap:8px;flex-wrap:wrap}
-  .tab{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#0f1418;cursor:pointer}
-  .tab.active{border-color:var(--acc)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
-  input[type=text], input[type=url], textarea, select{
-    width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1418;color:var(--fg)
-  }
-  textarea{min-height:110px}
-  button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#161d23;color:#e8ecef;cursor:pointer}
-  button+button{margin-left:8px}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .col2{display:grid;grid-template-columns:1fr;gap:10px}
-  @media(min-width:680px){ .col2{grid-template-columns:1fr 1fr} }
-  .muted{opacity:.75;font-size:13px}
-  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;margin-right:6px}
-  .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
-  @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
-
-  /* certificate overlay (same page) */
-  #certOverlay{position:fixed;inset:0;background:rgba(5,8,12,.6);display:none;z-index:9999}
-  #certPane{max-width:760px;margin:4vh auto;background:#fff;color:#111;border-radius:12px;padding:20px;overflow:auto;max-height:92vh;-webkit-overflow-scrolling:touch}
-  #certPane .m{color:#666;font-size:13px}
-  #certPane h2{margin:0 0 6px}
-  #certPane .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  #certPane img{max-width:100%;border:1px solid #ddd;border-radius:8px}
-</style>
+<link rel="stylesheet" href="./assets/css/app.css?v=1">
 </head>
 <body>
 <div class="wrap">
@@ -52,7 +19,7 @@
 
   <!-- GENERATE -->
   <section id="generate" class="card">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Generate an Echoprint</h2>
+    <h2 class="h2">Generate an Echoprint</h2>
     <div class="col2">
       <div>
         <label class="muted">Title (optional)</label>
@@ -61,7 +28,8 @@
       <div>
         <label class="muted">Platform (optional)</label>
         <select id="genPlatform">
-          <option value="">—</option><option>Substack</option><option>LinkedIn</option><option>X</option>
+          <option value="">—</option>
+          <option>Substack</option><option>LinkedIn</option><option>X</option>
           <option>Instagram</option><option>YouTube</option>
         </select>
       </div>
@@ -75,7 +43,7 @@
       </div>
     </div>
 
-    <div class="card" style="margin:14px 0">
+    <div class="card inner">
       <div class="col2">
         <div>
           <label class="muted">Hash from TEXT (browser SHA-256)</label>
@@ -88,7 +56,7 @@
           <div class="row"><button id="btnHashFile">Hash File → SHA-256</button></div>
         </div>
       </div>
-      <div style="margin-top:8px">
+      <div class="mt8">
         <label class="muted">Or paste an existing hash (64 hex)</label>
         <input id="genHash" type="text" placeholder="6f1a…">
       </div>
@@ -98,12 +66,12 @@
       <button id="btnInsert">Insert into EchoprintOS</button>
       <button id="btnClearGen">Clear</button>
     </div>
-    <div id="genMsg" class="muted" style="margin-top:8px"></div>
+    <div id="genMsg" class="muted mt8"></div>
   </section>
 
   <!-- VERIFY -->
   <section id="verify" class="card">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Verify an Echoprint</h2>
+    <h2 class="h2">Verify an Echoprint</h2>
     <label class="muted">Paste a SHA-256 hash or a permalink</label>
     <input id="q" type="text" placeholder="e.g., 6f1a… or https://substack.com/p/…">
     <div class="row">
@@ -111,36 +79,38 @@
       <button id="btnRecent" title="Show recent">Recent</button>
       <button id="btnClear"  title="Clear">Clear</button>
     </div>
-    <div id="out" style="margin-top:14px"></div>
+    <div id="out" class="mt14"></div>
   </section>
 
-  <!-- POSTS -->
+  <!-- POSTS (live feed) -->
   <section id="posts" class="card">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Echoprinted Posts</h2>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin:12px 0">
+    <h2 class="h2">Echoprinted Posts</h2>
+    <div class="row gap8 mt12">
       <select id="platform">
         <option value="">All platforms</option>
         <option>Substack</option><option>LinkedIn</option><option>X</option>
         <option>Instagram</option><option>YouTube</option>
       </select>
       <input id="search" type="text" placeholder="Search title…">
-      <label style="display:flex;align-items:center;gap:6px;opacity:.85">
+      <label class="checkbox">
         <input id="imgonly" type="checkbox"> with image only
       </label>
       <button id="refresh">Refresh</button>
     </div>
     <div id="list" class="grid"></div>
-    <div class="row" style="justify-content:center">
+    <div class="row center">
       <button id="more">Load more</button>
     </div>
   </section>
 </div>
 
-<!-- certificate overlay -->
+<!-- certificate overlay (same page) -->
 <div id="certOverlay"><div id="certPane"></div></div>
 
-<!-- Load env and app (same folder as index.html) -->
+<!-- ENV (defines window.__ENV with Supabase URL + anon key) -->
 <script src="./env.js?v=24"></script>
+
+<!-- App -->
 <script type="module" src="./app.js?v=24"></script>
 </body>
 </html>
