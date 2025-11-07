@@ -1,13 +1,9 @@
 <!doctype html>
 <html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EchoprintOS — Generate • Verify • Posts</title>
-
-<!-- Optional fallbacks if env.js isn't loaded (leave empty if you already have env.js) -->
-<meta name="supabase-url"  content="">
-<meta name="supabase-anon" content="">
-
 <style>
   :root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
   *{box-sizing:border-box}
@@ -18,6 +14,7 @@
   h1{font-size:22px;margin:0}
   nav{display:flex;gap:8px;flex-wrap:wrap}
   .tab{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#0f1418;cursor:pointer}
+  .tab.active{border-color:var(--acc)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
   input[type=text], input[type=url], textarea, select{
     width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1418;color:var(--fg)
@@ -33,7 +30,7 @@
   .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
   @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
 
-  /* certificate overlay (same page, no new window) */
+  /* certificate overlay (same page) */
   #certOverlay{position:fixed;inset:0;background:rgba(5,8,12,.6);display:none;z-index:9999}
   #certPane{max-width:760px;margin:4vh auto;background:#fff;color:#111;border-radius:12px;padding:20px;overflow:auto;max-height:92vh;-webkit-overflow-scrolling:touch}
   #certPane .m{color:#666;font-size:13px}
@@ -41,18 +38,19 @@
   #certPane .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   #certPane img{max-width:100%;border:1px solid #ddd;border-radius:8px}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header>
     <h1>EchoprintOS</h1>
     <nav>
-      <a class="tab" href="#generate">Generate</a>
-      <a class="tab" href="#verify">Verify</a>
-      <a class="tab" href="#posts">Posts</a>
+      <a class="tab" href="#generate" data-tab="generate">Generate</a>
+      <a class="tab" href="#verify"   data-tab="verify">Verify</a>
+      <a class="tab" href="#posts"    data-tab="posts">Posts</a>
     </nav>
   </header>
 
-  <!-- GENERATE (now on this page) -->
+  <!-- GENERATE -->
   <section id="generate" class="card">
     <h2 style="margin:0 0 8px 0;font-size:18px">Generate an Echoprint</h2>
     <div class="col2">
@@ -81,7 +79,7 @@
       <div class="col2">
         <div>
           <label class="muted">Hash from TEXT (browser SHA-256)</label>
-          <textarea id="genText" placeholder="Paste the post text or any content to hash…"></textarea>
+          <textarea id="genText" placeholder="Paste any content to hash…"></textarea>
           <div class="row"><button id="btnHashText">Hash Text → SHA-256</button></div>
         </div>
         <div>
@@ -116,7 +114,7 @@
     <div id="out" style="margin-top:14px"></div>
   </section>
 
-  <!-- POSTS (live feed / small cards) -->
+  <!-- POSTS -->
   <section id="posts" class="card">
     <h2 style="margin:0 0 8px 0;font-size:18px">Echoprinted Posts</h2>
     <div class="row" style="gap:8px;flex-wrap:wrap;margin:12px 0">
@@ -141,251 +139,8 @@
 <!-- certificate overlay -->
 <div id="certOverlay"><div id="certPane"></div></div>
 
-<!-- env with SUPABASE_URL + SUPABASE_ANON_KEY (keep this) -->
-<script src="env.js"></script>
-
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
-  /* --- ENV (env.js preferred; meta as fallback) --- */
-  const metaURL = document.querySelector('meta[name="supabase-url"]')?.content?.trim()
-  const metaKEY = document.querySelector('meta[name="supabase-anon"]')?.content?.trim()
-  const env = window.__ENV || {}
-  const SUPABASE_URL = env.SUPABASE_URL || metaURL
-  const SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY || metaKEY
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ alert('Missing SUPABASE env'); }
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-  /* --- helpers --- */
-  const $=(id)=>document.getElementById(id)
-  const iso=t=>t?new Date(t).toISOString():''
-  const pick=(r,names)=>{ for(const n of names){ if(r[n]!=null) return r[n] } return null }
-  const titleOf = r => pick(r,['title','post_title','name','caption','text']) || 'Untitled'
-  const linkOf  = r => pick(r,['permalink','perma_link','link','document_url','doc_url','file_url','url'])
-  const imgOf   = r => pick(r,['url','image_url','image','media_url','media','photo','photo_url','thumb_url','file_url'])
-  const tsOf    = r => pick(r,['timestamp_iso','sent_at','timestamp','created_at'])
-  const recIdOf = r => pick(r,['record_id','id'])
-
-  const out=$('out'), list=$('list'); let page=0, pageSize=12, lastKey=''; const REC=new Map()
-  const overlay=$('certOverlay'), pane=$('certPane')
-
-  /* --- hashing (browser SHA-256) --- */
-  const toHex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')
-  async function sha256OfText(txt){ const b=new TextEncoder().encode(txt); return toHex(await crypto.subtle.digest('SHA-256', b)) }
-  async function sha256OfFile(file){ const b=await file.arrayBuffer(); return toHex(await crypto.subtle.digest('SHA-256', b)) }
-
-  /* --- certificate JSON / PNG / overlay --- */
-  function downloadJSON(n){
-    const base = location.pathname.includes('/ledger') ? '/ledger/' : '/'
-    const cert={schema:'echoprint.v1',
-      record:{record_id:n.record_id||null,title:n.title||null,hash:n.hash||null,
-              platform:n.platform||null,permalink:n.permalink||null,url:n.url||null,
-              sent_at:n.ts||null},
-      proof:{hash_algo:'sha-256',
-             verify_url:`${location.origin}${base}#verify?q=${encodeURIComponent(n.hash||n.permalink||'')}`,
-             generated_at:new Date().toISOString()}}
-    const a=document.createElement('a')
-    a.href=URL.createObjectURL(new Blob([JSON.stringify(cert,null,2)],{type:'application/json'}))
-    a.download=`${(n.record_id||n.hash||'echoprint').slice(0,16)}.echoprint.json`
-    a.click(); URL.revokeObjectURL(a.href)
-  }
-  async function downloadCertificatePNG(n){
-    const W=1080,H=1440,P=48,canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H
-    const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H)
-    ctx.fillStyle='#111'; ctx.font='bold 48px Inter, Arial'; ctx.fillText('Echoprint Certificate', P, P+12)
-    ctx.font='16px Inter, Arial'; ctx.fillStyle='#666'; ctx.fillText('Recorded through EchoprintOS provenance ledger.', P, P+48)
-    let y=P+80
-    if(n.url){
-      try{
-        const img=await new Promise((res,rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=n.url })
-        const iw=Math.min(W-P*2, img.width), ih=iw*(img.height/img.width)
-        ctx.drawImage(img,(W-iw)/2,y,iw,ih); y+=ih+24
-      }catch{}
-    }
-    const row=(label,val)=>{ ctx.fillStyle='#111'; ctx.font='bold 22px Inter, Arial'; ctx.fillText(label,P,y); y+=26; ctx.font='18px Inter, Arial'; wrap(String(val||'N/A')); y+=14 }
-    function wrap(text){ const max=W-P*2; let line=''; for(const w of text.split(' ')){ const test=(line?line+' ':'')+w; if(ctx.measureText(test).width>max){ ctx.fillText(line,P,y); y+=26; line=w } else line=test } if(line) ctx.fillText(line,P,y) }
-    row('Title', n.title); row('Record ID', n.record_id); row('SHA-256', n.hash||'N/A'); row('Timestamp (UTC)', iso(n.ts))
-    canvas.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`${(n.record_id||n.hash||'echoprint').slice(0,16)}.certificate.png`; a.click(); URL.revokeObjectURL(a.href) })
-  }
-  function openCertificate(r){
-    const n = { record_id:recIdOf(r), title:titleOf(r), hash:r.hash||null,
-                platform:r.platform||null, permalink:linkOf(r), url:imgOf(r), ts:tsOf(r) }
-    REC.set(n.record_id, n)
-    pane.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2>Echoprint Certificate</h2>
-        <button id="closeCert" style="border:0;background:#eee;padding:6px 10px;border-radius:8px;cursor:pointer">Close</button>
-      </div>
-      <div class="m">This is a preview of your certificate.</div>
-      ${n.url?`<img src="${n.url}" alt="">`:''}
-      <div style="margin-top:10px"><strong>Title:</strong> ${n.title}</div>
-      <div style="margin-top:6px"><strong>Record ID:</strong> ${n.record_id||''}</div>
-      <div style="margin-top:6px"><strong>SHA-256:</strong> <code>${n.hash||'N/A'}</code></div>
-      <div style="margin-top:6px"><strong>Timestamp (UTC):</strong> ${iso(n.ts)}</div>
-      <div class="row">
-        <button id="btnCertPNG">Download Certificate (.png)</button>
-        <button id="btnJSON">Download JSON</button>
-        <button id="btnPrint">Print / Save PDF</button>
-      </div>`
-    overlay.style.display='block'
-    $('closeCert').onclick=()=>overlay.style.display='none'
-    $('btnPrint').onclick=()=>window.print()
-    $('btnJSON').onclick =()=>downloadJSON(n)
-    $('btnCertPNG').onclick=()=>downloadCertificatePNG(n)
-    overlay.onclick=(e)=>{ if(e.target===overlay) overlay.style.display='none' }
-  }
-
-  /* --- shared card body (used by Verify + Posts) --- */
-  function cardBody(r){
-    const n = { record_id:recIdOf(r), title:titleOf(r), hash:r.hash||null,
-                platform:r.platform||null, permalink:linkOf(r), url:imgOf(r), ts:tsOf(r) }
-    REC.set(n.record_id, n)
-    const dt=iso(n.ts).replace('T',' ').slice(0,19)
-    return `
-      <div class="muted" style="font-size:13px">EchoprintOS Record ID: ${n.record_id||''}</div>
-      <div class="muted" style="font-size:13px">Timestamp (UTC): ${dt||''}</div>
-      ${n.hash?`<div class="muted" style="margin-top:6px">hash:</div><div style="word-break:break-all">${n.hash}</div>`:''}
-      <div class="row" style="margin-top:6px">
-        <a href="#" data-action="expand" data-key="${n.record_id}">View</a>
-        ${n.permalink?`<a href="${n.permalink}">Open post</a>`:''}
-        ${n.url?`<a href="${n.url}">View image</a>`:''}
-        ${n.hash?`<a href="#verify" onclick="document.getElementById('q').value='${n.hash}';document.getElementById('btnVerify').click();return false;">Open in Verify</a>`:''}
-        <a href="#" data-action="cert" data-key="${n.record_id}">View certificate</a>
-        <a href="#" data-action="json" data-key="${n.record_id}">Download JSON</a>
-        <a href="#" data-action="png"  data-key="${n.record_id}">Download certificate</a>
-      </div>
-      <div id="x-${n.record_id}" style="display:none;margin-top:10px"></div>`
-  }
-  function expandCard(r, mountId){
-    const n = { record_id:recIdOf(r), title:titleOf(r), hash:r.hash||null,
-                platform:r.platform||null, permalink:linkOf(r), url:imgOf(r), ts:tsOf(r) }
-    const mount=document.getElementById(mountId)
-    const dt=iso(n.ts).replace('T',' ').slice(0,19)
-    mount.innerHTML = `
-      ${n.url?`<div class="muted">media</div><div style="margin:6px 0"><a href="${n.url}">Open image</a></div>
-        <details style="margin-top:6px"><summary>Preview</summary>
-          <img src="${n.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
-        </details>`:''}
-      ${n.permalink?`<div class="muted" style="margin-top:6px">link</div><div><a href="${n.permalink}">${n.permalink}</a></div>`:''}
-      <div class="muted" style="margin-top:6px">title</div><div>${n.title}</div>
-      <div class="muted" style="margin-top:6px">record_id</div><div style="word-break:break-all">${n.record_id||''}</div>
-      ${n.hash?`<div class="muted" style="margin-top:6px">hash</div><div style="word-break:break-all">${n.hash}</div>`:''}
-      <div class="muted" style="margin-top:6px">timestamp (UTC)</div><div>${dt}</div>
-      <div class="muted" style="margin-top:10px">Verified by EchoprintOS</div>`
-    mount.style.display='block'
-  }
-
-  /* --- global click handling for links/buttons inside cards --- */
-  document.addEventListener('click',(e)=>{
-    const t=e.target.closest('[data-action]'); if(!t) return
-    e.preventDefault()
-    const n=REC.get(t.dataset.key); if(!n) return
-    if(t.dataset.action==='expand') expandCard(n,'x-'+t.dataset.key)
-    if(t.dataset.action==='json')   downloadJSON(n)
-    if(t.dataset.action==='cert')   openCertificate(n)
-    if(t.dataset.action==='png')    downloadCertificatePNG(n)
-  })
-
-  /* --- GENERATE actions --- */
-  $('btnHashText').onclick = async ()=>{
-    const txt=$('genText').value.trim()
-    if(!txt){ $('genMsg').textContent='Enter text to hash.'; return }
-    $('genHash').value = await sha256OfText(txt)
-    $('genMsg').textContent='Text hashed ✓'
-  }
-  $('btnHashFile').onclick = async ()=>{
-    const f=$('genFile').files?.[0]
-    if(!f){ $('genMsg').textContent='Choose a file to hash.'; return }
-    $('genHash').value = await sha256OfFile(f)
-    $('genMsg').textContent=`File hashed ✓ (${f.name})`
-  }
-  $('btnInsert').onclick = async ()=>{
-    const row = {
-      title: ($('genTitle').value || 'Untitled').trim(),
-      platform: $('genPlatform').value || null,
-      permalink: $('genPermalink').value.trim() || null,
-      url: $('genURL').value.trim() || null,
-      hash: $('genHash').value.trim() || null,
-      sent_at: new Date().toISOString()
-    }
-    if(!row.hash){ $('genMsg').textContent='Missing hash — hash text/file or paste a 64-hex hash.'; return }
-    $('genMsg').textContent='Saving…'
-    const { data, error } = await supabase.from('echoprints').insert(row).select().single()
-    if(error){ $('genMsg').textContent='Insert error: '+error.message; return }
-    $('genMsg').textContent='Saved ✓'
-    openCertificate(data)                 // preview
-    renderVerify([data])                  // reflect in Verify
-    if(typeof prependPost==='function') prependPost(data) // reflect in Posts
-  }
-  $('btnClearGen').onclick = ()=>{
-    ['genTitle','genPermalink','genURL','genText','genHash'].forEach(id=>$(id).value='')
-    $('genPlatform').value=''; $('genFile').value=''; $('genMsg').textContent=''
-  }
-
-  /* --- VERIFY --- */
-  function renderVerify(rows){
-    const out=$('out')
-    if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
-    out.innerHTML = rows.map(r=>`<div class="card"><strong>${titleOf(r)}</strong>${cardBody(r)}</div>`).join('')
-  }
-  $('btnVerify').onclick = async ()=>{
-    const v=$('q').value.trim()
-    const out=$('out')
-    if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink.</div>'; return }
-    const isHash=/^[a-f0-9]{64}$/i.test(v)
-    let { data, error } = await supabase.from('echoprints').select('*').eq(isHash?'hash':'permalink', v).limit(5)
-    if(error || !data?.length){
-      const r2 = await supabase.from('echoprints').select('*').eq('perma_link', v).limit(5)
-      data = r2.data
-    }
-    renderVerify(data||[])
-  }
-  $('btnRecent').onclick = async ()=>{
-    const out=$('out')
-    const { data, error } = await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(10)
-    out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
-    if(!error) renderVerify(data)
-  }
-  $('btnClear').onclick = ()=>{ $('q').value=''; $('out').innerHTML='' }
-
-  /* --- POSTS (live feed) --- */
-  function postCard(r){
-    return `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>${titleOf(r)}</strong>
-        <div>
-          ${r.platform?`<span class="pill">${r.platform}</span>`:''}
-          ${tsOf(r)?`<span class="pill">${iso(tsOf(r)).replace('T',' ').slice(0,19)}</span>`:''}
-        </div>
-      </div>${cardBody(r)}
-    </div>`
-  }
-  function prependPost(r){
-    REC.set(recIdOf(r),{
-      record_id: recIdOf(r), title: titleOf(r), hash: r.hash||null,
-      platform: r.platform||null, permalink: linkOf(r), url: imgOf(r), ts: tsOf(r)
-    })
-    list.insertAdjacentHTML('afterbegin', postCard(r))
-  }
-  async function fetchPosts(reset=false){
-    const p=$('platform').value.trim(), s=$('search').value.trim(), i=$('imgonly').checked
-    if(reset){ page=0; list.innerHTML=''; lastKey='' }
-    const k=JSON.stringify({p,s,i}); if(k!==lastKey){ page=0; list.innerHTML=''; lastKey=k }
-    let q = supabase.from('echoprints').select('*')
-    if(p) q=q.eq('platform',p)
-    if(s) q=q.or(['title','post_title','caption','text'].map(col=>`${col}.ilike.%${s}%`).join(','))
-    if(i) q=q.or('url.not.is.null,image_url.not.is.null,image.not.is.null,media_url.not.is.null,media.not.is.null,photo.not.is.null,photo_url.not.is.null,thumb_url.not.is.null,file_url.not.is.null')
-    q = q.order('created_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
-    const { data, error } = await q
-    if(error){ list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return }
-    if(!data || (!data.length && page===0)){ list.innerHTML='<div class="muted">No posts found.</div>'; return }
-    list.insertAdjacentHTML('beforeend', data.map(postCard).join('')); page++
-  }
-  $('refresh').onclick = ()=>fetchPosts(true)
-  $('more').onclick    = ()=>fetchPosts(false)
-
-  /* --- Load initial content so page is “alive” --- */
-  fetchPosts(true)
-  $('btnRecent').click()
-</script>
+<!-- Load env and app (same folder as index.html) -->
+<script src="./env.js?v=24"></script>
+<script type="module" src="./app.js?v=24"></script>
+</body>
 </html>
