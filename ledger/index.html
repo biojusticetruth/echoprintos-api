@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EchoprintOS — Verify & Posts</title>
+<style>
+  :root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
+  *{box-sizing:border-box}
+  body{font:16px/1.5 Inter,system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:var(--fg)}
+  a{color:var(--acc);text-decoration:none}
+  .wrap{max-width:980px;margin:40px auto;padding:0 18px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  h1{font-size:22px;margin:0}
+  nav{display:flex;gap:8px}
+  .tab{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#0f1418;cursor:pointer}
+  .tab.active{outline:2px solid var(--acc)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+  input[type=text],select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1418;color:var(--fg)}
+  button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#161d23;color:var(--fg);cursor:pointer}
+  button+button{margin-left:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .muted{opacity:.75;font-size:13px}
+  details{background:#0f1418;border-radius:8px;padding:10px;margin-top:8px;border:1px solid var(--line)}
+  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;margin-right:6px}
+  .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+  @media(min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>EchoprintOS</h1>
+    <nav>
+      <a class="tab" data-tab="verify" href="#verify">Verify</a>
+      <a class="tab" data-tab="posts"  href="#posts">Posts</a>
+    </nav>
+  </header>
+
+  <!-- VERIFY -->
+  <section id="view-verify" class="card" hidden>
+    <h2 style="margin:0 0 8px 0;font-size:18px">Verify an Echoprint</h2>
+    <label class="muted">Paste a SHA-256 hash or a permalink</label>
+    <input id="q" type="text" placeholder="e.g., 6f1a… or https://substack.com/p/…">
+    <div class="row">
+      <button id="btnVerify">Verify</button>
+      <button id="btnRecent" title="Show recent">Recent</button>
+      <button id="btnClear"  title="Clear">Clear</button>
+    </div>
+    <div id="out" style="margin-top:14px"></div>
+  </section>
+
+  <!-- POSTS -->
+  <section id="view-posts" class="card" hidden>
+    <h2 style="margin:0 0 8px 0;font-size:18px">Echoprinted Posts</h2>
+    <div class="toolbar">
+      <select id="platform">
+        <option value="">All platforms</option>
+        <option>Substack</option><option>LinkedIn</option><option>X</option>
+        <option>Instagram</option><option>YouTube</option>
+      </select>
+      <input id="search" type="text" placeholder="Search title…">
+      <label style="display:flex;align-items:center;gap:6px;opacity:.85">
+        <input id="imgonly" type="checkbox"> with image only
+      </label>
+      <button id="refresh">Refresh</button>
+    </div>
+    <div id="list" class="grid"></div>
+    <div class="row" style="justify-content:center">
+      <button id="more">Load more</button>
+    </div>
+  </section>
+</div>
+
+<!-- public env (your URL + anon key) -->
+<script src="env.js"></script>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.__ENV || {}
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ alert('Missing SUPABASE env'); }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+  const $ = (id)=>document.getElementById(id)
+  const qs = (s)=>document.querySelector(s)
+  const out = $('out'), list = $('list')
+  let page=0, pageSize=12, lastKey=''
+
+  // tabs
+  function setTab(tab){
+    const isVerify = tab==='verify'
+    qs('#view-verify').hidden = !isVerify
+    qs('#view-posts').hidden  =  isVerify
+    document.querySelectorAll('.tab').forEach(a=>a.classList.toggle('active', a.dataset.tab===tab))
+    if(isVerify){ $('q').focus() }
+  }
+  function route(){ const tab=(location.hash||'#verify').slice(1) || 'verify'; setTab(tab); if(tab==='posts'){ fetchPosts(true) } }
+  window.addEventListener('hashchange', route)
+
+  // verify
+  function renderVerify(rows){
+    if(!rows || rows.length===0){ out.innerHTML='<div class="muted">No records found.</div>'; return }
+    out.innerHTML = rows.map(r=>`
+      <details>
+        <summary><strong>${r.title||'Untitled'}</strong>
+          ${r.platform?`<span class="pill">${r.platform}</span>`:''}
+          ${r.sent_at?`<span class="pill">${new Date(r.sent_at).toISOString().slice(0,19).replace('T',' ')}</span>`:''}
+        </summary>
+        <div style="margin-top:8px">
+          <div class="muted">hash:</div><div style="word-break:break-all">${r.hash||''}</div>
+          ${r.permalink?`<div class="muted" style="margin-top:6px">permalink:</div><div><a target="_blank" href="${r.permalink}">Open post</a></div>`:''}
+          ${r.url?`<div class="muted" style="margin-top:6px">media:</div><div><a target="_blank" href="${r.url}">View image</a></div>
+            <details style="margin-top:6px"><summary>Preview</summary>
+              <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+            </details>`:''}
+        </div>
+      </details>`).join('')
+  }
+  $('btnVerify').onclick = async ()=>{
+    const v = $('q').value.trim()
+    if(!v){ out.innerHTML='<div class="muted">Enter a hash or permalink.</div>'; return }
+    const isHash = /^[a-f0-9]{64}$/i.test(v)
+    const { data, error } = await supabase.from('echoprints').select('*').eq(isHash?'hash':'permalink', v).limit(5)
+    out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
+    if(!error) renderVerify(data)
+  }
+  $('btnRecent').onclick = async ()=>{
+    const { data, error } = await supabase.from('echoprints').select('*').order('sent_at',{ascending:false}).limit(10)
+    out.innerHTML = error ? `<div class="muted">Error: ${error.message}</div>` : ''
+    if(!error) renderVerify(data)
+  }
+  $('btnClear').onclick = ()=>{ $('q').value=''; out.innerHTML='' }
+
+  // posts
+  function postCard(r){
+    const dt = r.sent_at ? new Date(r.sent_at).toISOString().slice(0,19).replace('T',' ') : ''
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>${r.title||'Untitled'}</strong>
+        <div>${r.platform?`<span class="pill">${r.platform}</span>`:''}${dt?`<span class="pill">${dt}</span>`:''}</div>
+      </div>
+      <div class="muted" style="margin-top:6px">hash:</div>
+      <div style="word-break:break-all">${r.hash||''}</div>
+      <div class="row" style="margin-top:6px">
+        ${r.permalink?`<a target="_blank" href="${r.permalink}">Open post</a>`:''}
+        ${r.url?`<a target="_blank" href="${r.url}">View image</a>`:''}
+        ${r.hash?`<a href="#verify" onclick="document.getElementById('q').value='${r.hash}';document.getElementById('btnVerify').click();return false;">Open in Verify</a>`:''}
+      </div>
+      ${r.url?`<details style="margin-top:8px"><summary>Preview</summary>
+        <img src="${r.url}" style="max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:8px">
+      </details>`:''}
+    </div>`
+  }
+  async function fetchPosts(reset=false){
+    const p = $('platform').value.trim(), s = $('search').value.trim(), i = $('imgonly').checked
+    const key = JSON.stringify({p,s,i}); if(reset || key!==lastKey){ page=0; list.innerHTML=''; lastKey=key }
+    let q = supabase.from('echoprints').select('*').or('permalink.not.is.null,platform.not.is.null')
+    if(p) q=q.eq('platform',p); if(s) q=q.ilike('title', `%${s}%`); if(i) q=q.not('url','is',null)
+    q = q.order('sent_at',{ascending:false}).range(page*pageSize, page*pageSize+pageSize-1)
+    const { data, error } = await q
+    if(error){ list.innerHTML = `<div class="muted">Error: ${error.message}</div>`; return }
+    if(!data || (data.length===0 && page===0)){ list.innerHTML='<div class="muted">No posts found.</div>'; return }
+    list.insertAdjacentHTML('beforeend', data.map(postCard).join('')); page++
+  }
+  $('refresh').onclick = ()=>fetchPosts(true)
+  $('more').onclick = ()=>fetchPosts(false)
+
+  if(!location.hash) location.hash = '#verify'
+  route()
+</script>
+</html>
