@@ -2,9 +2,6 @@
   "name": "echoprintos-api",
   "private": true,
   "version": "0.1.0",
-  "description": "Serverless API for EchoprintOS (perma_link is the canonical DB column).",
-  "main": "api/record.js",
-  "engines": { "node": ">=18" },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"
   }
