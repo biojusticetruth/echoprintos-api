@@ -74,15 +74,14 @@ function downloadJSON(row){
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-// --- load recent (FIX: order by created_at, not db_created_at) ---
 async function loadRecent(){
   const { data, error } = await sb
     .from('echoprints')
-    .select('id, ecp_id, record_id, title, hash, created_at, timestamp, bitcoin_receipt_b64, bitcoin_anchored_at')
+    .select('id, ecp_id, record_id, title, hash, created_at, timestamp') // <— no bitcoin_* fields
     .order('created_at', { ascending:false })
     .limit(20);
 
-  const host = $('#recent-list'); host.innerHTML = '';
+  const host = document.querySelector('#recent-list'); host.innerHTML = '';
   if (error) { host.textContent = error.message; return; }
   data.forEach(row=>{
     const el = card(row);
