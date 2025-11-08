@@ -5,81 +5,62 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('Missing SUPABASE_URL / SUPABASE_ANON_KEY in env.js');
 }
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const API = location.origin;                  // your Vercel API host (same origin)
-const $ = (s, r=document) => r.querySelector(s);
+
+// API host (same origin if you deployed /api/record and /api/verify on Vercel)
+const API = location.origin;
+
+// Shorthand DOM helpers
+const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
-const isHex64 = s => /^[a-f0-9]{64}$/i.test(s);
-const isECP   = s => /^ECP[-\s]?[A-Z0-9]{8,}$/i.test(s);
-const ecpOf = r => r.ecp_id || ('ECP-' + (r.record_id||'').toString().replace(/-/g,'').slice(0,12).toUpperCase());
-const tsOf  = r => (r.sent_at || r.created_at || '').replace('T',' ').replace('Z',' UTC');
+// ------------ validators ------------
+const isHex64 = s => !!s && /^[a-f0-9]{64}$/i.test(s);
+const isECP   = s => !!s && /^ECP[-\s]?[A-Z0-9]{4,}$/i.test(s);
 
+// ------------ ECP label (short, stable) ------------
+/* Prefer a stored ecp_id if present; otherwise derive from record_id/uuid:
+   take first 8 hex chars of the UUID (no dashes), uppercase → ECP-XXXXXXXX */
+const ecpOf = (row) => {
+  if (row.ecp_id && /^ECP[-A-Z0-9]{4,}$/.test(row.ecp_id)) return row.ecp_id.toUpperCase();
+  const base = (row.record_id || row.id || '')
+    .toString().replace(/[^a-f0-9]/gi,'').slice(0,8).toUpperCase();
+  return base ? `ECP-${base}` : 'ECP——';
+};
+
+// ------------ timestamp pretty ------------
+const prettyTS = (row) => {
+  const t = row.sent_at || row.created_at || '';
+  if (!t) return '—';
+  try {
+    return new Date(t).toISOString().replace('T',' ').replace('Z',' UTC');
+  } catch { return t; }
+};
+
+// Card template
 const cardTemplate = $('#card-template');
 
-function renderCard(row){
-  const tpl = cardTemplate.content.cloneNode(true);
-  $('.title', tpl).textContent = row.title || '(untitled)';
-  $('.ecp',   tpl).textContent = ecpOf(row);
-  $('.hash',  tpl).textContent = row.hash || '—';
-  $('.ts',    tpl).textContent = tsOf(row) || '—';
-
-  // Buttons
-  const bOpen  = $('.open-post', tpl);
-  const bImg   = $('.view-image', tpl);
-  const bVer   = $('.open-in-verify', tpl);
-  const bCert  = $('.view-cert', tpl);
-  const bJ     = $('.download-json', tpl);
-  const bC     = $('.download-cert', tpl);
-
-  if (row.permalink) { bOpen.hidden = false; bOpen.onclick = () => window.open(row.permalink,'_blank'); }
-  else if (row.url)  { bOpen.hidden = false; bOpen.textContent='Open link'; bOpen.onclick = () => window.open(row.url,'_blank'); }
-
-  if (row.url && /\.(png|jpe?g|gif|webp|mp4|mov|m4v)$/i.test(row.url)) {
-    bImg.hidden = false; bImg.onclick = () => window.open(row.url,'_blank');
-  }
-
-  bVer.onclick  = () => { $('#verify-input').value = isHex64(row.hash||'') ? row.hash : ecpOf(row); $('#verify').scrollIntoView({behavior:'smooth'}); };
-  bJ.onclick    = () => download('echoprint.json', JSON.stringify(slim(row),null,2));
-  bCert.onclick = async () => {
-    const cert = await buildCertificate(row);
-    $('#cert-pre').textContent = JSON.stringify(cert, null, 2);
-    $('#cert-modal').showModal();
-  };
-  bC.onclick    = async () => {
-    const cert = await buildCertificate(row);
-    download('echoprint-certificate.json', JSON.stringify(cert, null, 2));
-  };
-
-  return tpl;
-}
-
-function slim(r){
-  return {
-    ecp_id: ecpOf(r),
-    record_id: r.record_id,
-    title: r.title, hash: r.hash,
-    url: r.url, permalink: r.permalink, platform: r.platform,
-    created_at: r.created_at, sent_at: r.sent_at
-  };
-}
-
+// ------------ certificate builder ------------
 async function buildCertificate(row){
-  // Ask your API to verify/anchor the hash (Bitcoin OpenTimestamps).
-  // If your /api/verify returns { anchored:true, txid, merkle, proof_url }, include it.
+  // Try to fetch Bitcoin/OpenTimestamps proof from your API (optional).
   let ots = null;
   try {
-    const res = await fetch(`${API}/api/verify?hash=${encodeURIComponent(row.hash)}`);
-    if (res.ok) ots = await res.json();
+    if (isHex64(row.hash)) {
+      const res = await fetch(`${API}/api/verify?hash=${encodeURIComponent(row.hash)}`);
+      if (res.ok) ots = await res.json();
+    }
   } catch {}
+
   return {
     standard: 'EchoprintOS v1',
     ecp_id: ecpOf(row),
     title: row.title || null,
-    hash: row.hash,
+    hash: isHex64(row.hash) ? row.hash : null,
     timestamps: {
       db_created_at: row.created_at || null,
       sent_at: row.sent_at || null,
-      bitcoin: ots && (ots.txid || ots.anchored) ? ots : { anchored: false, status: 'pending' }
+      bitcoin: ots && (ots.txid || ots.anchored)
+        ? ots
+        : { anchored: false, status: isHex64(row.hash) ? 'pending' : 'no-hash' }
     },
     links: {
       permalink: row.permalink || null,
@@ -89,6 +70,7 @@ async function buildCertificate(row){
   };
 }
 
+// Small helper to download a JSON blob
 function download(name, text){
   const blob = new Blob([text], {type:'application/json'});
   const a = document.createElement('a');
@@ -96,36 +78,142 @@ function download(name, text){
   a.download = name; a.click(); URL.revokeObjectURL(a.href);
 }
 
-/* ========== RECENT ========== */
+// For the small JSON export
+function slim(r){
+  return {
+    ecp_id: ecpOf(r),
+    record_id: r.record_id ?? null,
+    title: r.title ?? null,
+    hash: isHex64(r.hash) ? r.hash : null,
+    url: r.url ?? null,
+    permalink: r.permalink ?? null,
+    platform: r.platform ?? null,
+    created_at: r.created_at ?? null,
+    sent_at: r.sent_at ?? null
+  };
+}
+
+// ------------ render a card (with safe buttons) ------------
+function renderCard(row){
+  const tpl = cardTemplate.content.cloneNode(true);
+
+  // Title + ECP label
+  const title = row.title || (row.permalink ? new URL(row.permalink).hostname : '(untitled)');
+  $('.title', tpl).textContent = title;
+  $('.ecp',   tpl).textContent = ecpOf(row);
+
+  // Hash + Timestamp
+  $('.hash', tpl).textContent = isHex64(row.hash) ? row.hash : '—';
+  $('.ts',   tpl).textContent = prettyTS(row);
+
+  // Buttons
+  const bOpen  = $('.open-post', tpl);
+  const bImg   = $('.view-image', tpl);
+  const bVer   = $('.open-in-verify', tpl);
+  const bCert  = $('.view-cert', tpl);
+  const bJ     = $('.download-json', tpl);
+  const bC     = $('.download-cert', tpl);
+
+  // Open post / link
+  if (row.permalink) {
+    bOpen.hidden = false;
+    bOpen.onclick = () => window.open(row.permalink,'_blank');
+  } else if (row.url) {
+    bOpen.hidden = false;
+    bOpen.textContent='Open link';
+    bOpen.onclick = () => window.open(row.url,'_blank');
+  }
+
+  // View image (only for obvious media)
+  if (row.url && /\.(png|jpe?g|gif|webp|mp4|mov|m4v)$/i.test(row.url)) {
+    bImg.hidden = false; bImg.onclick = () => window.open(row.url,'_blank');
+  }
+
+  // Open in Verify (prefer hash, else ECP)
+  bVer.onclick = () => {
+    const q = isHex64(row.hash) ? row.hash : ecpOf(row);
+    const input = $('#verify-input');
+    if (input) {
+      input.value = q;
+      $('#verify-btn')?.click();
+      document.getElementById('verify')?.scrollIntoView({behavior:'smooth'});
+    }
+  };
+
+  // Certificate buttons: disable when no valid hash
+  const enableCert = isHex64(row.hash);
+  bCert.disabled = !enableCert;
+  bC.disabled    = !enableCert;
+
+  // View certificate (modal text JSON)
+  bCert.onclick = async () => {
+    const cert = await buildCertificate(row);
+    const pre  = $('#cert-pre');
+    const dlg  = $('#cert-modal');
+    if (pre && dlg) { pre.textContent = JSON.stringify(cert, null, 2); dlg.showModal(); }
+  };
+
+  // Downloads
+  bJ.onclick = () => download(`${ecpOf(row)}.json`, JSON.stringify(slim(row),null,2));
+  bC.onclick = async () => {
+    const cert = await buildCertificate(row);
+    download(`${ecpOf(row)}-certificate.json`, JSON.stringify(cert, null, 2));
+  };
+
+  return tpl;
+}
+
+// ========== RECENT ==========
 async function loadRecent(){
+  const list = $('#recent-list'); if (list) list.innerHTML = '';
   const { data, error } = await supabase
     .from('echoprints')
     .select('id,record_id,ecp_id,title,hash,created_at,sent_at,url,permalink,platform')
     .order('created_at', { ascending:false })
     .limit(50);
-  const list = $('#recent-list'); list.innerHTML = '';
+
+  if (!list) return;
   if (error) { list.textContent = error.message; return; }
   (data||[]).forEach(r => list.append(renderCard(r)));
 }
 
-/* ========== VERIFY ========== */
+// ========== VERIFY ==========
 async function doVerify(q){
-  const out = $('#verify-result'); out.innerHTML = '';
-  if (!q) { out.textContent='Enter ECP-… or 64-hex hash'; return; }
+  const out = $('#verify-result'); if (out) out.innerHTML = '';
+  if (!q) { out && (out.textContent='Enter ECP-… or 64-hex hash'); return; }
 
-  let sel = null;
-  if (isHex64(q)) sel = supabase.from('echoprints').select('*').eq('hash', q).limit(1);
-  else if (isECP(q)) sel = supabase.from('echoprints').select('*').eq('ecp_id', q.toUpperCase()).limit(1);
-  else out.textContent = 'Not a valid ECP or 64-hex hash';
+  // 1) Hash lookup
+  if (isHex64(q)) {
+    const { data, error } = await supabase.from('echoprints').select('*').eq('hash', q).limit(1);
+    if (error) { out && (out.textContent = error.message); return; }
+    if (!data?.length) { out && (out.textContent = 'No match'); return; }
+    out && out.append(renderCard(data[0])); return;
+  }
 
-  if (!sel) return;
-  const { data, error } = await sel;
-  if (error) { out.textContent = error.message; return; }
-  if (!data || !data.length) { out.textContent = 'No match'; return; }
-  out.append(renderCard(data[0]));
+  // 2) ECP lookup
+  if (isECP(q)) {
+    // Try DB column first
+    let row = null;
+    try {
+      const { data } = await supabase.from('echoprints').select('*').eq('ecp_id', q.toUpperCase()).limit(1);
+      if (data?.length) row = data[0];
+    } catch {}
+    if (!row) {
+      // Fallback: scan recent and match computed ECPs
+      const { data } = await supabase
+        .from('echoprints')
+        .select('id,record_id,ecp_id,title,hash,created_at,sent_at,url,permalink,platform')
+        .order('created_at',{ascending:false}).limit(500);
+      row = (data||[]).find(r => ecpOf(r).toUpperCase() === q.toUpperCase()) || null;
+    }
+    if (!row) { out && (out.textContent='No match'); return; }
+    out && out.append(renderCard(row)); return;
+  }
+
+  out && (out.textContent = 'Not a valid ECP or 64-hex hash');
 }
 
-/* ========== GENERATE ========== */
+// ========== GENERATE (safe wiring) ==========
 async function sha256HexFromText(s){
   const enc = new TextEncoder().encode(s);
   const buf = await crypto.subtle.digest('SHA-256', enc);
@@ -137,42 +225,54 @@ async function sha256HexFromFile(file){
   return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-$('#btnHashText').onclick = async ()=>{
-  const t = $('#g-text').value||'';
-  $('#g-hash').value = t ? await sha256HexFromText(t) : '';
-};
-$('#btnHashFile').onclick = async ()=>{
-  const f = $('#g-file').files[0]; if(!f) return;
-  $('#g-hash').value = await sha256HexFromFile(f);
-};
-$('#btnClear').onclick = ()=>{ ['g-title','g-permalink','g-media','g-text','g-hash'].forEach(id=>$('#'+id).value=''); $('#g-status').textContent=''; };
+// Only attach if those elements exist (prevents crashes when Generate UI isn’t on the page)
+$('#btnHashText')?.addEventListener('click', async ()=>{
+  const t = $('#g-text')?.value || '';
+  const out = $('#g-hash'); if (!out) return;
+  out.value = t ? await sha256HexFromText(t) : '';
+});
+$('#btnHashFile')?.addEventListener('click', async ()=>{
+  const f = $('#g-file')?.files?.[0]; const out = $('#g-hash'); if (!out || !f) return;
+  out.value = await sha256HexFromFile(f);
+});
+$('#btnClear')?.addEventListener('click', ()=>{
+  ['g-title','g-permalink','g-media','g-text','g-hash'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  const s = $('#g-status'); if (s) s.textContent='';
+});
+$('#btnInsert')?.addEventListener('click', async ()=>{
+  const title = $('#g-title')?.value?.trim() || '';
+  const permalink = $('#g-permalink')?.value?.trim() || null;
+  const url = $('#g-media')?.value?.trim() || null;
+  const hash = $('#g-hash')?.value?.trim() || '';
 
-$('#btnInsert').onclick = async ()=>{
-  const title = $('#g-title').value.trim();
-  const permalink = $('#g-permalink').value.trim() || null;
-  const url = $('#g-media').value.trim() || null;
-  const hash = $('#g-hash').value.trim();
+  const status = $('#g-status');
+  if (!title || !isHex64(hash)) { status && (status.textContent='Need a title and a valid 64-hex hash.'); return; }
+  status && (status.textContent='Stamping on Bitcoin + inserting…');
 
-  if (!title || !isHex64(hash)) {
-    $('#g-status').textContent = 'Need a title and a valid 64-hex hash.';
-    return;
+  // Your serverless API does DB insert + OpenTimestamps stamp.
+  try {
+    const res = await fetch(`${API}/api/record`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ title, hash, permalink, url, stamp:true })
+    });
+    if (!res.ok) throw new Error('Insert failed');
+    status && (status.textContent='Inserted. (Bitcoin stamp requested.)');
+  } catch {
+    status && (status.textContent='Insert failed.');
   }
-  $('#g-status').textContent = 'Stamping on Bitcoin + inserting…';
-
-  // Your serverless API handles: DB insert + OpenTimestamps stamp.
-  const res = await fetch(`${API}/api/record`, {
-    method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({ title, hash, permalink, url, stamp:true })
-  });
-  if (!res.ok) { $('#g-status').textContent = 'Insert failed.'; return; }
-  const r = await res.json();
-  $('#g-status').textContent = 'Inserted. (Bitcoin stamp requested.)';
   await loadRecent();
-};
+});
 
-/* ========== WIRE UI ========== */
-$('#verify-form').addEventListener('submit', e=>{ e.preventDefault(); doVerify($('#verify-input').value.trim()); });
-$('#recent-btn').onclick = ()=>loadRecent();
-$('#clear-btn').onclick = ()=>{ $('#verify-input').value=''; $('#verify-result').innerHTML=''; };
+// ========== WIRE UI ==========
+$('#verify-form')?.addEventListener('submit', e=>{
+  e.preventDefault();
+  doVerify($('#verify-input')?.value?.trim() || '');
+});
+$('#recent-btn')?.addEventListener('click', ()=>loadRecent());
+$('#clear-btn')?.addEventListener('click', ()=>{
+  const v = $('#verify-input'); if (v) v.value='';
+  const out = $('#verify-result'); if (out) out.innerHTML='';
+});
 
+// Boot
 loadRecent();
