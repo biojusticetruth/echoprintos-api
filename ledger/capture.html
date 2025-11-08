@@ -3,177 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EchoprintOS · Capture</title>
+  <title>EchoprintOS — Capture</title>
   <link rel="stylesheet" href="./theme.css" />
-  <style>
-    :root{--bg:#0b0c0f;--card:#12141a;--ink:#e9edf1;--muted:#97a3b3;--accent:#29D9E7}
-    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:720px;margin:4rem auto;padding:0 1.25rem}
-    h1{font-size:2rem;margin:0 0 .75rem}
-    p.lead{color:var(--muted);margin:0 0 2rem}
-    .card{background:var(--card);border:1px solid #1d2230;border-radius:14px;padding:22px 20px;margin:16px 0}
-    label{display:block;font-size:.875rem;color:var(--muted);margin:.75rem 0 .35rem}
-    input,select,textarea{
-      width:100%;box-sizing:border-box;background:#0e1016;color:var(--ink);
-      border:1px solid #243046;border-radius:10px;padding:12px 12px;font-size:1rem;outline:none
-      <!-- Site header (shared) -->
-<header style="display:flex;align-items:center;justify-content:space-between;margin:24px auto 12px;max-width:980px;padding:0 16px;">
-  <div style="display:flex;gap:.6rem;align-items:center;font-weight:800">
-    <div style="width:18px;height:18px;border-radius:50%;
-                background:linear-gradient(135deg,#37f2a5,#29D9E7)"></div>
-    <div>EchoprintOS</div>
-  </div>
-  <nav style="display:flex;gap:14px;">
-    <a href="/ledger/" style="color:#cfd6df;text-decoration:none">Ledger</a>
-    <a href="/ledger/capture.html" style="color:#cfd6df;text-decoration:none">Capture</a>
-    <a href="https://echoprintos.org" target="_blank" style="color:#cfd6df;text-decoration:none">About</a>
-  </nav>
-</header>
-    }
-    textarea{min-height:92px;resize:vertical}
-    .row{display:flex;gap:12px}
-    .row > *{flex:1}
-    .actions{display:flex;gap:10px;margin-top:14px}
-    button{
-      appearance:none;border:0;border-radius:10px;padding:12px 16px;font-weight:600;cursor:pointer
-    }
-    .primary{background:var(--accent);color:#001018}
-    .ghost{background:#151822;color:var(--ink);border:1px solid #283246}
-    .muted{color:var(--muted)}
-    .ok{color:#7ef3c4}
-    .err{color:#ff8c8c}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .tiny{font-size:.85rem}
-  </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Capture a Post</h1>
-    <p class="lead">Create a public Echoprint entry from a social post. Hash stays hidden; Verify page still shows it.</p>
 
-    <form id="f" class="card">
-      <div class="row">
-        <div>
-          <label for="platform">Platform</label>
-          <select id="platform" name="platform" required>
-            <option value="">Choose…</option>
-            <option>LinkedIn</option>
-            <option>X</option>
-            <option>Instagram</option>
-            <option>YouTube</option>
-            <option>Substack</option>
-            <option>Other</option>
-          </select>
+  <!-- shared header -->
+  <header class="site-nav">
+    <a class="brand" href="/ledger/"><span class="sprout">🌱</span> EchoprintOS</a>
+    <nav>
+      <a href="/ledger/capture.html">Capture</a>
+      <a href="/ledger/">Ledger</a>
+      <a href="/ledger/about.html">About</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="card hero">
+      <h1 class="title">Capture a Post</h1>
+      <p class="blurb">Lightweight entry form you can use now. Later we’ll wire this to Make for auto-posting.</p>
+    </section>
+
+    <section class="card">
+      <form id="captureForm">
+        <div class="row" style="margin-bottom:10px">
+          <input class="mono" type="text" id="cap_title" placeholder="Title (optional)" />
         </div>
-        <div>
-          <label for="handle">Handle</label>
-          <input id="handle" name="handle" placeholder="@biojusticetruth" />
+        <div class="row" style="margin-bottom:10px">
+          <input class="mono" type="url" id="cap_permalink" placeholder="Permalink to the post (optional)" />
         </div>
-      </div>
+        <div class="row" style="margin-bottom:10px">
+          <input class="mono" type="text" id="cap_platform" placeholder="Platform (X, LinkedIn, Substack) — optional" />
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn btn-primary" type="submit">Generate ECP & Preview</button>
+          <a class="btn btn-ghost" href="/ledger/">Back to Ledger</a>
+        </div>
+      </form>
+      <div id="capturePreview" class="tiny mono"></div>
+      <p class="tiny muted" style="margin-top:10px">
+        Note: this page doesn’t write to the ledger yet. It only prepares the record fields we’ll submit later.
+      </p>
+    </section>
+  </main>
 
-      <label for="permalink">Post URL</label>
-      <input id="permalink" name="permalink" type="url" placeholder="https://…" required />
-
-      <label for="title">Title (optional)</label>
-      <input id="title" name="title" placeholder="Short description" />
-
-      <label for="notes">Notes (private)</label>
-      <textarea id="notes" name="notes" placeholder="Context for your archive (not shown on feed)"></textarea>
-
-      <div class="actions">
-        <button class="primary" id="submitBtn" type="submit">Save Echoprint</button>
-        <button class="ghost" id="clearBtn" type="button">Clear</button>
-      </div>
-
-      <div id="status" class="tiny muted" style="margin-top:10px;"></div>
-    </form>
-
-    <div id="result" class="card" style="display:none">
-      <div class="tiny muted">Created</div>
-      <div class="mono" id="ecp">ECP-…</div>
-      <div class="tiny"><a id="verifyLink" href="#" target="_blank">Open on Verify →</a></div>
-    </div>
-
-    <p class="tiny muted">Tip: bookmark this page on mobile for fast logging.</p>
-  </div>
-
-  <!-- Your public env shim (already in your repo) -->
-  <script src="./env.js"></script>
   <script>
-    // Helpers
-    const $ = (id) => document.getElementById(id);
-    const supa = {
-      url: (path) => `${ENV.SUPABASE_URL}${path}`,
-      headers: () => ({
-        "Content-Type": "application/json",
-        "apikey": ENV.SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${ENV.SUPABASE_ANON_KEY}`,
-        "Prefer": "return=representation"
-      })
-    };
-
-    // Autofill platform/handle from URL if possible
-    $("permalink").addEventListener("change", (e) => {
-      try {
-        const u = new URL(e.target.value);
-        const host = u.hostname.replace("www.","");
-        if (!$("platform").value) {
-          if (host.includes("x.com") || host.includes("twitter")) $("platform").value = "X";
-          else if (host.includes("linkedin")) $("platform").value = "LinkedIn";
-          else if (host.includes("instagram")) $("platform").value = "Instagram";
-          else if (host.includes("youtube")) $("platform").value = "YouTube";
-          else if (host.includes("substack")) $("platform").value = "Substack";
-        }
-        if (!$("handle").value) {
-          const m = u.pathname.match(/@([A-Za-z0-9_\.]+)/);
-          if (m) $("handle").value = "@"+m[1];
-        }
-      } catch {}
-    });
-
-    // Submit
-    $("f").addEventListener("submit", async (ev) => {
+    // simple local preview — no network writes yet
+    function ecpNow(){
+      const pad = (n, s=2)=>String(n).padStart(s,'0');
+      const d = new Date();
+      const ecp = `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
+      return ecp;
+    }
+    document.getElementById('captureForm').addEventListener('submit', (ev)=>{
       ev.preventDefault();
-      const btn = $("submitBtn");
-      btn.disabled = true;
-      $("status").textContent = "Saving…";
+      const title = document.getElementById('cap_title').value.trim();
+      const permalink = document.getElementById('cap_permalink').value.trim();
+      const platform = document.getElementById('cap_platform').value.trim();
 
-      // Payload – let the database generate ECP + timestamps
-      const payload = {
-        title: $("title").value || null,
-        permalink: $("permalink").value,
-        platform: $("platform").value || null,
-        handle: $("handle").value || null,
-        notes: $("notes").value || null
-      };
+      const ecp = ecpNow();
+      const utc = new Date().toISOString().replace('T',' ').replace('Z',' UTC');
 
-      try {
-        const res = await fetch(supa.url("/rest/v1/echoprints"), {
-          method: "POST",
-          headers: supa.headers(),
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const [row] = await res.json();
-
-        // Expect Supabase to return record_id + timestamp columns
-        const ecp = row.record_id || row.ecp_id || row.ecp || "(no ECP returned)";
-        $("ecp").textContent = ecp;
-        $("verifyLink").href = `/ledger/?q=${encodeURIComponent(ecp)}`;
-        $("result").style.display = "block";
-        $("status").innerHTML = `<span class="ok">Saved.</span> ECP <span class="mono">${ecp}</span>`;
-        $("f").reset();
-      } catch (err) {
-        $("status").innerHTML = `<span class="err">Error:</span> ${String(err).slice(0,400)}`;
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    $("clearBtn").addEventListener("click", () => {
-      $("f").reset();
-      $("status").textContent = "";
-      $("result").style.display = "none";
+      document.getElementById('capturePreview').innerHTML =
+        `ECP: ${ecp}<br/>Timestamp (UTC): ${utc}<br/>Title: ${title||'—'}<br/>Permalink: ${permalink||'—'}<br/>Platform: ${platform||'—'}`;
     });
   </script>
 </body>
