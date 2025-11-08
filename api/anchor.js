@@ -5,12 +5,31 @@ const allow = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'content-type');
 };
 
-module.exports = async (req, res) => {
-  allow(res);
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST, OPTIONS');
-    return res.status(405).json({ ok:false, error:'Use POST' });
+// Minimal OpenTimestamps submit (hex SHA-256 -> pending calendar receipt)
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ ok:false, error:'POST only' });
+  try {
+    const { hash } = req.body || {};
+    if (!/^[a-f0-9]{64}$/i.test(hash || '')) return res.status(400).json({ ok:false, error:'hash must be 64-hex' });
+
+    // submit to a public OTS calendar
+    const buf = Buffer.from(hash, 'hex');
+    const r = await fetch('https://a.pool.opentimestamps.org/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: buf
+    });
+
+    if (!r.ok) throw new Error(`OTS ${r.status}`);
+    const receipt = await r.arrayBuffer(); // raw receipt bytes
+
+    // you would normally store 'receipt' and later upgrade it to 'anchored'
+    return res.status(200).json({ ok:true, status:'pending', bytes: Buffer.byteLength(Buffer.from(receipt)) });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error: e.message });
+  }
+}
+export const config = { api: { bodyParser: true } };
   }
   try {
     const { hash } = req.body || {};
