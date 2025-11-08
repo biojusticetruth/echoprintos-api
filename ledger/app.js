@@ -1,130 +1,95 @@
-// Uses your existing env.js. Any of these shapes will work:
-import * as env from './env.js';
-// Supported names: SUPABASE_URL/SUPABASE_ANON_KEY or url/key
-const SUPABASE_URL = env.SUPABASE_URL || env.url || env.SUPABASE_PROJECT_URL;
-const SUPABASE_KEY = env.SUPABASE_ANON_KEY || env.key || env.SUPABASE_KEY;
+/* ====== config ====== */
+const ENABLE_VERIFY = true;   // set to false to hide the Verify card entirely
 
-const h = (sel) => document.querySelector(sel);
-const elQ    = h('#q');
-const elVerify = h('#btnVerify');
-const elRecent = h('#btnRecent');
-const elFeed   = h('#feed');
-const elResult = h('#verify-result');
-const elStatus = h('#status');
+/* ====== supabase helpers ====== */
+const supa = {
+  url: (path) => `${ENV.SUPABASE_URL}${path}`,
+  headers: () => ({
+    "Content-Type": "application/json",
+    "apikey": ENV.SUPABASE_ANON_KEY,
+    "Authorization": `Bearer ${ENV.SUPABASE_ANON_KEY}`
+  })
+};
 
-function headers() {
-  return {
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Content-Type': 'application/json'
-  };
-}
+/* ====== DOM ====== */
+const $ = (id) => document.getElementById(id);
+if (!ENABLE_VERIFY) $("verifySection").style.display = "none";
 
-function viewURL(params) {
-  const base = `${SUPABASE_URL}/rest/v1/v_echoprints_public`;
-  return `${base}?${params}`;
-}
+/* ====== utils ====== */
+const isHex64 = (s) => /^[0-9a-f]{64}$/i.test(String(s||"").trim());
+const isECP   = (s) => /^ECP-\d{17,}$/.test(String(s||"").trim());
 
-function showStatus(msg='') { elStatus.textContent = msg; }
-function cardHTML(record) {
-  const { ecp_id, title, timestamp_human_utc, permalink } = record;
-  return `
-    <article class="card">
-      <h3>${title ? escapeHtml(title) : 'Echoprint'}</h3>
-      <div class="kv">
-        <div class="k">ECP</div>
-        <div class="v mono">${ecp_id}</div>
-        <div class="k">Timestamp</div>
-        <div class="v">${timestamp_human_utc}</div>
-        ${permalink ? `<div class="k">Link</div><div class="v"><a href="${permalink}" target="_blank" rel="noopener">Permalink</a></div>` : ``}
-      </div>
-    </article>
-  `;
-}
-function verifyHTML(record) {
-  // On the verify detail we DO show the hash for audit transparency
-  const { ecp_id, hash, title, timestamp_human_utc, permalink } = record;
-  return `
-    <article class="card">
-      <h3>${title ? escapeHtml(title) : 'Echoprint'}</h3>
-      <div class="kv">
-        <div class="k">ECP</div>
-        <div class="v mono">${ecp_id}</div>
-        <div class="k">SHA-256</div>
-        <div class="v mono">${hash}</div>
-        <div class="k">Timestamp</div>
-        <div class="v">${timestamp_human_utc}</div>
-        ${permalink ? `<div class="k">Link</div><div class="v"><a href="${permalink}" target="_blank" rel="noopener">Permalink</a></div>` : ``}
-      </div>
-    </article>
+/* ====== verify ====== */
+async function verify(q){
+  const out = $("verifyResult");
+  if (!q) { out.textContent = ""; return; }
+  out.textContent = "Looking up…";
+
+  // search public view; feed keeps hash hidden, verify can show it
+  const params = new URLSearchParams({
+    select: "record_id,hash,title,timestamp_human_utc,permalink,timestamp_iso",
+    limit: "1",
+    order: "timestamp_iso.desc",
+    or: `record_id.eq.${q},hash.eq.${q}`
+  });
+
+  const res = await fetch(supa.url(`/rest/v1/v_echoprints_public?${params}`), { headers: supa.headers() });
+  if (!res.ok) {
+    out.innerHTML = `<span class="err">Error:</span> ${await res.text()}`;
+    return;
+  }
+  const rows = await res.json();
+  if (!rows.length) {
+    out.innerHTML = `<span class="err">No match.</span>`;
+    return;
+  }
+  const r = rows[0];
+  const link = `/ledger/?q=${encodeURIComponent(r.record_id)}`;
+  out.innerHTML = `
+    <div class="ok">Verified</div>
+    <div class="mono" style="margin:.25rem 0">${r.record_id}</div>
+    <div class="tiny">Timestamp (UTC): <span class="mono">${r.timestamp_human_utc||"—"}</span></div>
+    <div class="tiny">SHA-256: <span class="mono">${r.hash||"—"}</span></div>
+    ${r.permalink ? `<div class="tiny">Source: <a href="${r.permalink}" target="_blank">${r.permalink}</a></div>` : ""}
+    <div class="tiny" style="margin-top:.35rem"><a href="${link}">Permalink</a></div>
   `;
 }
 
-async function loadRecent() {
-  showStatus('Loading recent…');
-  try {
-    const url = viewURL([
-      'select=ecp_id,title,timestamp_human_utc,timestamp_iso,permalink',
-      'order=timestamp_iso.desc',
-      'limit=12'
-    ].join('&'));
-    const res = await fetch(url, { headers: headers() });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    const rows = await res.json();
-    if (!Array.isArray(rows) || rows.length === 0) {
-      elFeed.innerHTML = `<p class="muted">No records yet.</p>`;
-    } else {
-      elFeed.innerHTML = rows.map(cardHTML).join('');
-    }
-    showStatus('');
-  } catch (err) {
-    showStatus('Failed to load recent.');
-    elFeed.innerHTML = `<p class="muted mono">${escapeHtml(err.message)}</p>`;
+$("btnVerify")?.addEventListener("click", () => verify($("q").value.trim()));
+$("btnClear")?.addEventListener("click", () => { $("q").value=""; $("verifyResult").textContent=""; });
+
+// if a query param ?q=… is present, auto-verify
+const qp = new URLSearchParams(location.search);
+if (qp.get("q")) {
+  $("q").value = qp.get("q");
+  verify(qp.get("q"));
+}
+
+/* ====== recent feed ====== */
+async function loadRecent(){
+  $("recentStatus").textContent = "Loading…";
+  const params = new URLSearchParams({
+    select: "record_id,title,timestamp_human_utc,permalink,timestamp_iso",
+    order: "timestamp_iso.desc",
+    limit: "12"
+  });
+  const res = await fetch(supa.url(`/rest/v1/v_echoprints_public?${params}`), { headers: supa.headers() });
+  if (!res.ok) {
+    $("recentStatus").innerHTML = `Error: ${await res.text()}`;
+    return;
   }
+  const rows = await res.json();
+  $("recent").innerHTML = rows.map(r => `
+    <article class="item">
+      <h4 class="mono">${r.record_id}</h4>
+      <div class="tiny muted">${r.timestamp_human_utc || ""}</div>
+      ${r.title ? `<div>${r.title}</div>` : ""}
+      <div class="tiny" style="margin-top:.35rem">
+        <a href="/ledger/?q=${encodeURIComponent(r.record_id)}">Verify</a>
+        ${r.permalink ? ` · <a href="${r.permalink}" target="_blank">Post</a>` : ""}
+      </div>
+    </article>
+  `).join("");
+  $("recentStatus").textContent = rows.length ? "" : "No records yet.";
 }
-
-async function verifyQuery(q) {
-  if (!q) return;
-  showStatus('Verifying…');
-  elResult.innerHTML = '';
-  try {
-    const enc = encodeURIComponent(q.trim());
-    // OR filter: try ECP match OR hash match
-    const url = viewURL([
-      'select=ecp_id,hash,title,timestamp_human_utc,timestamp_iso,permalink',
-      `or=(ecp_id.eq.${enc},hash.eq.${enc})`,
-      'limit=1'
-    ].join('&'));
-    const res = await fetch(url, { headers: headers() });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    const rows = await res.json();
-    if (!rows.length) {
-      elResult.innerHTML = `<p class="muted">No match for <span class="mono">${escapeHtml(q)}</span>.</p>`;
-    } else {
-      elResult.innerHTML = verifyHTML(rows[0]);
-    }
-    showStatus('');
-  } catch (err) {
-    showStatus('Verification failed.');
-    elResult.innerHTML = `<p class="muted mono">${escapeHtml(err.message)}</p>`;
-  }
-}
-
-function escapeHtml(s=''){
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-// Wire up UI
-elVerify.addEventListener('click', () => verifyQuery(elQ.value));
-elRecent.addEventListener('click', loadRecent);
-elQ.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') verifyQuery(elQ.value);
-});
-
-// Deep-link: /ledger/?ecp=ECP-....
-const params = new URLSearchParams(location.search);
-const deep = params.get('ecp') || params.get('hash') || params.get('q');
-if (deep) { elQ.value = deep; verifyQuery(deep); }
-
-// Initial feed
 loadRecent();
