@@ -1,74 +1,63 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EchoprintOS</title>
-  <link rel="stylesheet" href="/ledger/theme.css"/>
+  <link rel="stylesheet" href="/ledger/theme.css" />
 </head>
 <body>
   <main class="wrap">
-
-    <section class="hero card">
+    <section class="hero panel">
       <h1>EchoprintOS</h1>
       <p>Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
     </section>
 
     <!-- Generate -->
-    <section class="panel">
+    <section class="panel" id="gen">
       <h2>Generate</h2>
 
-      <label class="lbl">Title
-        <input id="title" placeholder="Untitled"/>
-      </label>
+      <label for="title">Title</label>
+      <input id="title" placeholder="Untitled" />
 
-      <label class="lbl">Permalink (optional)
-        <input id="permalink" placeholder="https://…"/>
-      </label>
-
-      <label class="lbl">Media URL (optional)
-        <input id="media" placeholder="https://…/image.jpg"/>
-      </label>
-
-      <h3>Hash from TEXT (SHA-256)</h3>
-      <textarea id="text" rows="5" placeholder="Paste any content to hash…"></textarea>
-      <div class="row">
-        <button id="hash-text" class="btn">Hash Text → SHA-256</button>
+      <div class="two">
+        <div>
+          <label for="permalink">Permalink (optional)</label>
+          <input id="permalink" placeholder="https://…" />
+        </div>
+        <div>
+          <label for="media_url">Media URL (optional)</label>
+          <input id="media_url" placeholder="https://…/image.jpg" />
+        </div>
       </div>
 
-      <h3>Hash from FILE (SHA-256)</h3>
-      <input id="file" type="file"/>
-      <div class="row">
-        <button id="hash-file" class="btn">Hash File → SHA-256</button>
-      </div>
-
-      <label class="lbl">Computed Hash
-        <input id="hash" readonly placeholder="(computed 64-hex)"/>
-      </label>
+      <label for="text">Text to hash (SHA-256) — you can also choose a file instead</label>
+      <textarea id="text" placeholder="Paste any content to hash…"></textarea>
 
       <div class="row">
-        <button id="save" class="btn btn-success">Save to Ledger</button>
-        <button id="btc" class="btn" disabled>Anchor to Bitcoin</button>
+        <input type="file" id="file" />
+        <input id="hash" readonly placeholder="(computed 64-hex)" />
       </div>
+
+      <button id="generate" class="btn btn-primary">Generate</button>
     </section>
 
     <!-- Verify -->
     <section class="panel">
       <h2>Verify</h2>
-      <input id="verify-input" placeholder="ECP-XXXXXXX or 64-hex hash"/>
+      <input id="verify-input" placeholder="ECP-XXXXXXX or 64-hex hash" />
       <div class="row">
         <button id="verify-btn" class="btn">Verify</button>
         <button id="recent-btn" class="btn btn-ghost">Recent</button>
       </div>
-      <div id="verify-result"></div>
+      <div id="verify-result" class="stack"></div>
     </section>
 
     <!-- Recent -->
     <section class="panel">
       <h2>Recent</h2>
-      <div id="recent-list"></div>
+      <div id="recent-list" class="grid"></div>
     </section>
-
   </main>
 
   <!-- Certificate modal -->
@@ -81,10 +70,11 @@
     <div class="modal-actions">
       <button id="open-verify" class="btn">Open in Verify</button>
       <button id="dl-json" class="btn btn-ghost">Download JSON</button>
+      <button id="cert-dismiss" class="btn btn-ghost">Close</button>
     </div>
   </dialog>
 
-  <!-- Env & App -->
+  <!-- ENV must load BEFORE app.js -->
   <script src="/ledger/env.js"></script>
   <script type="module" src="/ledger/app.js"></script>
 </body>
