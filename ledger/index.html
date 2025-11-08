@@ -5,368 +5,374 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EchoprintOS — Generate • Verify • Recent</title>
 
+<!-- Dark theme + layout (inline so you only need one file) -->
 <style>
-/* ===== Dark theme + layout (inline so it always loads) ===== */
 :root { color-scheme: light dark; }
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
-main{width:min(980px,100% - 24px);margin:32px auto}
-h1{margin:0 0 10px 0;font-size:20px}
-h2{margin:8px 0 10px;font-size:18px}
+html,body{margin:0;font:16px/1.5 Inter,system-ui,Segoe UI,Arial}
 a{color:#8ab4f8;text-decoration:none}
 
 @media (prefers-color-scheme: dark){
   html,body{background:#0b0c10;color:#e8eaed}
-  .panel,section,article{background:#0f1318;border:1px solid #2a2f38;border-radius:12px}
+  .muted{color:#9aa0a6}
+  section,.panel,article{background:#0f1318;border:1px solid #2a2f38;border-radius:12px}
   input,textarea,select{background:#0e1116;color:#e8eaed;border:1px solid #2c313a;border-radius:10px}
   input::placeholder,textarea::placeholder{color:#828b93}
   button{background:#1f6feb;color:#fff;border:0;border-radius:10px}
   button:disabled{background:#2b2f36;color:#9aa0a6}
-  .open-in-verify,.view-cert,.download-json,.download-cert{background:#2b2f36}
-  .muted{color:#9aa0a6}
 }
-section.panel{padding:14px;margin-block:12px}
+.wrap{width:min(980px,100% - 24px);margin:24px auto}
+header{display:flex;justify-content:space-between;align-items:center;margin:8px 0 16px}
+h1{font-size:20px;margin:0}
+h2{margin:8px 0 10px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 input,textarea,select{width:100%;max-width:100%;padding:10px 12px}
-button{padding:10px 12px;cursor:pointer}
-label small{opacity:.8}
-.grid{display:grid;grid-template-columns:1fr;gap:14px}
-@media(min-width:760px){ .grid{grid-template-columns:1fr 1fr} }
+label{font-size:13px;opacity:.85}
+section{padding:14px;margin-block:12px}
 
-/* Cards */
-.card{position:relative;padding:14px;border:1px solid #28303a;border-radius:14px;background:#0f1318}
+#recent-list{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:760px){#recent-list{grid-template-columns:1fr 1fr}}
+
+.card{position:relative;padding:14px;border-radius:14px;border:1px solid #28303a;background:#0f1318}
 .card .title{margin:0 0 8px;font-weight:600}
-.ecp{
-  position:absolute;top:10px;right:12px;
-  background:#0d1117;color:#8ab4f8;border:1px solid #2b3038;
-  padding:2px 10px;border-radius:999px;font-weight:600;letter-spacing:.3px
-}
-.hash,.ts{
-  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#c3c8cf;
-  word-break:break-all;line-height:1.35;margin:2px 0 6px
-}
+.hash,.ts{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#c3c8cf;word-break:break-all;line-height:1.35;margin:2px 0 6px}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.actions button{flex:1 1 calc(50% - 8px)}
-@media(min-width:760px){ .actions button{flex:0 0 auto} }
+.actions button{flex:1 1 calc(50% - 8px);padding:10px}
+@media(min-width:760px){.actions button{flex:0 0 auto}}
 
-/* Certificate modal */
-dialog#cert-modal{border:0;border-radius:12px;padding:0;max-width:min(90vw,760px)}
-dialog::backdrop{background:rgba(0,0,0,.6)}
-#cert-box{padding:16px;background:#fff;color:#111;border-radius:12px;max-height:85vh;overflow:auto}
-@media (prefers-color-scheme: dark){ #cert-box{background:#0f1318;color:#e8eaed;border:1px solid #2a2f38} }
-#cert-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-pre{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.45}
+.ecp{position:absolute;top:10px;right:12px;background:#0d1117;color:#8ab4f8;border:1px solid #2b3038;padding:2px 10px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+
+#certOverlay{position:fixed;inset:0;background:rgba(5,8,12,.65);display:none;z-index:9999}
+#certPane{max-width:760px;margin:4vh auto;background:#fff;color:#111;border-radius:12px;padding:20px;overflow:auto;max-height:92vh}
+#certPane h3{margin:0 0 8px}
+#certPane .k{color:#666;font-size:13px}
+#certPane pre{background:#f6f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:10px;overflow:auto}
+#certPane .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 </style>
 </head>
 <body>
-<main>
-  <header class="panel" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+<div class="wrap">
+  <header>
     <h1>EchoprintOS</h1>
-    <nav class="row">
-      <a href="#generate">Generate</a>
-      <a href="#verify">Verify</a>
-      <a href="#recent">Recent</a>
-    </nav>
+    <div class="muted">Generate • Verify • Recent</div>
   </header>
 
-  <!-- ===== GENERATE ===== -->
-  <section id="generate" class="panel">
-    <h2>Generate</h2>
+  <!-- GENERATE (browser-only; hashes text/file and inserts a row) -->
+  <section id="generate">
+    <h2>Generate an Echoprint</h2>
     <div class="row">
       <div style="flex:1 1 260px">
         <label>Title</label>
         <input id="g-title" placeholder="Untitled">
       </div>
       <div style="flex:1 1 260px">
-        <label>Permalink <small>(optional)</small></label>
+        <label>Permalink (optional)</label>
         <input id="g-permalink" type="url" placeholder="https://…">
       </div>
       <div style="flex:1 1 260px">
-        <label>Media URL <small>(optional)</small></label>
+        <label>Media URL (optional)</label>
         <input id="g-media" type="url" placeholder="https://…/image.jpg">
       </div>
     </div>
 
     <div class="row" style="margin-top:8px">
-      <div style="flex:1 1 360px">
+      <div style="flex:1 1 340px">
         <label>Hash from TEXT (SHA-256)</label>
-        <textarea id="g-text" placeholder="Paste any content to hash…"></textarea>
-        <div class="row" style="margin-top:6px">
-          <button id="btnHashText">Hash Text → SHA-256</button>
-        </div>
+        <textarea id="g-text" placeholder="Paste content to hash…"></textarea>
+        <div class="row"><button id="btnHashText">Hash Text</button></div>
       </div>
       <div style="flex:1 1 260px">
         <label>Hash from FILE (SHA-256)</label>
         <input id="g-file" type="file" accept="*/*">
-        <div class="row" style="margin-top:6px">
-          <button id="btnHashFile">Hash File → SHA-256</button>
-        </div>
+        <div class="row"><button id="btnHashFile">Hash File</button></div>
       </div>
     </div>
 
-    <div style="margin-top:8px">
-      <label>Or paste an existing 64-hex hash</label>
-      <input id="g-hash" placeholder="6f1a…">
+    <div class="row" style="margin-top:8px">
+      <div style="flex:1 1 420px">
+        <label>Or paste an existing hash (64 hex)</label>
+        <input id="g-hash" placeholder="6f1a…">
+      </div>
     </div>
 
     <div class="row" style="margin-top:10px">
-      <button id="btnInsert">Insert</button>
+      <button id="btnInsert">Insert into EchoprintOS</button>
       <button id="btnClear">Clear</button>
+      <div id="g-status" class="muted" style="align-self:center"></div>
     </div>
-    <div id="g-status" class="muted" style="margin-top:8px"></div>
   </section>
 
-  <!-- ===== VERIFY ===== -->
-  <section id="verify" class="panel">
+  <!-- VERIFY -->
+  <section id="verify">
     <h2>Verify</h2>
     <form id="verify-form" class="row">
-      <input id="verify-input" placeholder="Enter ECP-######## or 64-hex hash" autocomplete="off" inputmode="text" style="flex:1 1 420px">
+      <input id="verify-input" placeholder="Enter EchoprintOS ID (ECP-…) or 64-hex hash" style="flex:1 1 420px">
       <button id="verify-btn" type="submit">Verify</button>
+      <button id="clear-btn" type="button">Clear</button>
     </form>
     <div id="verify-result" style="margin-top:12px"></div>
   </section>
 
-  <!-- ===== RECENT ===== -->
-  <section id="recent" class="panel">
+  <!-- RECENT -->
+  <section id="recent">
     <h2>Recent</h2>
-    <div id="recent-list" class="grid"></div>
+    <div class="row"><button id="recent-btn" type="button">Refresh</button></div>
+    <div id="recent-list" style="margin-top:12px"></div>
   </section>
+</div>
 
-  <!-- card template -->
-  <template id="card-template">
-    <article class="card">
-      <header>
-        <h3 class="title"></h3>
-        <small class="ecp"></small>
-      </header>
-      <dl class="meta">
-        <dt class="muted">Hash</dt><dd class="hash"></dd>
-        <dt class="muted">Timestamp</dt><dd class="ts"></dd>
-      </dl>
-      <nav class="actions">
-        <button class="open-post" hidden>Open post</button>
-        <button class="view-image" hidden>View image</button>
-        <button class="open-in-verify">Open in Verify</button>
-        <button class="view-cert">View certificate</button>
-        <button class="download-json">Download JSON</button>
-        <button class="download-cert">Download certificate</button>
-      </nav>
-    </article>
-  </template>
-
-  <!-- certificate modal -->
-  <dialog id="cert-modal">
-    <div id="cert-box">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <strong>Echoprint Certificate</strong>
-        <button id="cert-close">Close</button>
-      </div>
-      <pre id="cert-pre" style="margin-top:8px">…</pre>
-      <div id="cert-actions">
-        <button id="cert-download">Download certificate (.json)</button>
-      </div>
+<!-- Card template -->
+<template id="card-template">
+  <article class="card">
+    <span class="ecp"></span>
+    <h3 class="title"></h3>
+    <dl class="meta">
+      <dt class="muted">Hash</dt><dd class="hash"></dd>
+      <dt class="muted">Timestamp</dt><dd class="ts"></dd>
+    </dl>
+    <div class="actions">
+      <button class="open-post" hidden>Open post</button>
+      <button class="view-image" hidden>View image</button>
+      <button class="open-in-verify">Open in Verify</button>
+      <button class="view-cert">View certificate</button>
+      <button class="download-json">Download JSON</button>
+      <button class="download-cert">Download certificate</button>
     </div>
-  </dialog>
-</main>
+  </article>
+</template>
 
+<!-- Certificate overlay -->
+<div id="certOverlay"><div id="certPane"></div></div>
+
+<!-- Single-script app (replace the two constants below with your real creds) -->
 <script type="module">
-/* ===== One-file app (no external CSS/JS needed) ===== */
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm'
 
-/*** 1) CONFIG — paste your real values ***/
-const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';   // TODO: paste your real values
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';                          // TODO: paste your real value
+// ====== 1) SET THESE TWO VALUES ======
+const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co'         // <-- put your real URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c'                               // <-- put your real anon key
+// =====================================
 
-/*** 2) Supabase client ***/
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if(!SUPABASE_URL || !SUPABASE_ANON_KEY){ alert('Missing Supabase URL / anon key'); throw new Error('env') }
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-/*** 3) Helpers ***/
-const $  = (s, r=document)=>r.querySelector(s);
-const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
-const isHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim());
-const isECP   = s => /^ECP[-\s]?[A-Z0-9]{8,}$/i.test((s||'').trim());
-const tsNice  = t => t ? new Date(t).toISOString().replace('T',' ').replace('Z',' UTC') : '—';
+// ---------- helpers ----------
+const $  = (sel,root=document)=>root.querySelector(sel)
+const $$ = (sel,root=document)=>[...root.querySelectorAll(sel)]
+const isHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim())
+const toISO = t => t ? new Date(t).toISOString().replace('T',' ').replace('Z',' UTC') : ''
 
-/* Make a stable ECP code:
-   - if row.ecp_id exists → use it
-   - else use record_id or id (uuid) → take first 8 hex → ECP-######## */
-function ecpOf(row){
-  if (row?.ecp_id && /^ECP[-A-Z0-9]{4,}$/.test(row.ecp_id)) return row.ecp_id;
-  const src = (row?.record_id || row?.id || '').toString().replace(/[^a-f0-9]/ig,'');
-  const cut = src.slice(0,8).toUpperCase();
-  return cut ? `ECP-${cut}` : 'ECP——';
+// ECP badge: prefer stored ecp_id if it already starts with ECP; else derive from UUID
+const ecpFrom = (row)=>{
+  const rid = (row.ecp_id || '').toString()
+  if(/^ECP[-A-Z0-9]{4,}$/.test(rid)) return rid
+  const hex = (row.record_id || row.id || '').toString().replace(/[^a-f0-9]/gi,'').slice(0,12).toUpperCase()
+  return hex ? `ECP-${hex}` : 'ECP— —'
 }
 
-function slim(row){
-  return {
-    standard: 'EchoprintOS v1',
-    ecp_id: ecpOf(row),
-    record_id: row.record_id || row.id || null,
-    title: row.title || null,
-    hash: row.hash || null,
-    timestamps: {
-      db_created_at: row.created_at || null,
-      sent_at: row.sent_at || null,
-      bitcoin: { anchored: false, status: isHex64(row.hash) ? 'pending' : 'no-hash' }  // placeholder
-    },
-    links: {
-      permalink: row.permalink || null,
-      media: row.url || null
-    }
-  };
-}
-
+// small download helper
 function download(name, text){
-  const blob = new Blob([text], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  const blob = new Blob([text], {type:'application/json'})
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob); a.download = name; a.click()
+  URL.revokeObjectURL(a.href)
 }
 
-/*** 4) Render a card ***/
+// ---------- certificate overlay ----------
+function openCert(payload){
+  const overlay = $('#certOverlay'), pane = $('#certPane')
+  pane.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h3>Echoprint Certificate</h3>
+      <button id="closeCert" style="background:#eee;color:#111;border-radius:8px;padding:6px 10px;border:1px solid #ddd;cursor:pointer">Close</button>
+    </div>
+    <div class="k">Proof preview. Bitcoin anchoring shows as <em>pending</em> unless you later stamp via server.</div>
+    <pre id="cert-pre">${JSON.stringify(payload, null, 2)}</pre>
+    <div class="row">
+      <button id="certSave">Download JSON</button>
+      <button id="certPrint">Print</button>
+    </div>
+  `
+  overlay.style.display='block'
+  $('#closeCert').onclick = ()=>overlay.style.display='none'
+  $('#certSave').onclick  = ()=>download('echoprint-certificate.json', JSON.stringify(payload,null,2))
+  $('#certPrint').onclick = ()=>print()
+  overlay.onclick = (e)=>{ if(e.target===overlay) overlay.style.display='none' }
+}
+
+// ---------- render one card ----------
 function renderCard(row){
-  const tpl = $('#card-template').content.cloneNode(true);
-  const title = row.title || (row.permalink ? new URL(row.permalink).hostname : '(untitled)');
-  $('.title', tpl).textContent = title;
-  $('.ecp',   tpl).textContent = ecpOf(row);
-  $('.hash',  tpl).textContent = isHex64(row.hash) ? row.hash : '—';
-  const ts = row.sent_at || row.created_at || '';
-  $('.ts', tpl).textContent = tsNice(ts);
+  const tpl = $('#card-template').content.cloneNode(true)
+  $('.title',tpl).textContent = row.title || (row.permalink ? new URL(row.permalink).hostname : '(untitled)')
+  $('.ecp',tpl).textContent   = ecpFrom(row)
+  $('.hash',tpl).textContent  = isHex64(row.hash) ? row.hash : '—'
+  const ts = row.sent_at || row.created_at || row.timestamp_iso || ''
+  $('.ts',tpl).textContent = ts ? toISO(ts) : '—'
 
-  const bOpen  = $('.open-post', tpl);
-  const bImg   = $('.view-image', tpl);
-  const bVer   = $('.open-in-verify', tpl);
-  const bCert  = $('.view-cert', tpl);
-  const bJ     = $('.download-json', tpl);
-  const bC     = $('.download-cert', tpl);
+  const bOpen  = $('.open-post',tpl)
+  const bImg   = $('.view-image',tpl)
+  const bVer   = $('.open-in-verify',tpl)
+  const bCert  = $('.view-cert',tpl)
+  const bJ     = $('.download-json',tpl)
+  const bC     = $('.download-cert',tpl)
 
-  if (row.permalink) { bOpen.hidden=false; bOpen.onclick=()=>window.open(row.permalink,'_blank'); }
-  else if (row.url)  { bOpen.hidden=false; bOpen.textContent='Open link'; bOpen.onclick=()=>window.open(row.url,'_blank'); }
+  if(row.permalink){ bOpen.hidden=false; bOpen.onclick=()=>window.open(row.permalink,'_blank') }
+  else if(row.url){ bOpen.hidden=false; bOpen.textContent='Open link'; bOpen.onclick=()=>window.open(row.url,'_blank') }
 
-  if (row.url && /\.(png|jpe?g|gif|webp|mp4|mov|m4v)$/i.test(row.url)) {
-    bImg.hidden=false; bImg.onclick=()=>window.open(row.url,'_blank');
+  if(row.url && /\.(png|jpe?g|gif|webp|mp4|mov|m4v)$/i.test(row.url)){
+    bImg.hidden=false; bImg.onclick=()=>window.open(row.url,'_blank')
   }
 
   bVer.onclick = ()=>{
-    $('#verify-input').value = isHex64(row.hash||'') ? row.hash : ecpOf(row);
-    $('#verify-form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
-    window.scrollTo({top:0,behavior:'smooth'});
-  };
+    $('#verify-input').value = isHex64(row.hash||'') ? row.hash : ecpFrom(row)
+    $('#verify-btn').click()
+    window.scrollTo({top:0,behavior:'smooth'})
+  }
 
-  bJ.onclick = ()=> download(`${ecpOf(row)}.json`, JSON.stringify(slim(row),null,2));
+  bJ.onclick = ()=>{
+    const slim = {
+      ecp_id: ecpFrom(row),
+      record_id: row.record_id || null,
+      title: row.title || null,
+      hash: row.hash || null,
+      url: row.url || null,
+      permalink: row.permalink || null,
+      platform: row.platform || null,
+      created_at: row.created_at || null,
+      sent_at: row.sent_at || null
+    }
+    download('echoprint.json', JSON.stringify(slim,null,2))
+  }
+
+  bC.onclick = ()=>{
+    const cert = {
+      standard: 'EchoprintOS v1',
+      ecp_id: ecpFrom(row),
+      title: row.title || null,
+      hash: row.hash || null,
+      timestamps:{
+        db_created_at: row.created_at || null,
+        sent_at: row.sent_at || null,
+        bitcoin:{ anchored:false, status: isHex64(row.hash) ? 'pending' : 'no-hash' }
+      },
+      links:{ permalink: row.permalink || null, media: row.url || null, verify_ui: location.href }
+    }
+    download('echoprint-certificate.json', JSON.stringify(cert,null,2))
+  }
 
   bCert.onclick = ()=>{
-    const cert = slim(row);
-    $('#cert-pre').textContent = JSON.stringify(cert,null,2);
-    $('#cert-modal').showModal();
-  };
-  bC.onclick = ()=>{
-    const cert = slim(row);
-    download(`${ecpOf(row)}-certificate.json`, JSON.stringify(cert,null,2));
-  };
+    const cert = {
+      standard: 'EchoprintOS v1',
+      ecp_id: ecpFrom(row),
+      title: row.title || null,
+      hash: row.hash || null,
+      timestamps:{
+        db_created_at: row.created_at || null,
+        sent_at: row.sent_at || null,
+        bitcoin:{ anchored:false, status: isHex64(row.hash) ? 'pending' : 'no-hash' }
+      },
+      links:{ permalink: row.permalink || null, media: row.url || null, verify_ui: location.href }
+    }
+    openCert(cert)
+  }
 
-  return tpl;
+  return tpl
 }
 
-/*** 5) Load RECENT ***/
+// ---------- Recent ----------
 async function loadRecent(){
-  const list = $('#recent-list'); list.innerHTML = '';
+  const list = $('#recent-list'); list.innerHTML = ''
   const { data, error } = await supabase
     .from('echoprints')
-    .select('id,record_id,ecp_id,title,hash,created_at,sent_at,url,permalink,platform')
-    .order('created_at', { ascending:false })
-    .limit(50);
-  if (error){ list.textContent = error.message; return; }
-  (data||[]).forEach(row => list.append(renderCard(row)));
+    .select('id,record_id,ecp_id,title,hash,created_at,sent_at,url,permalink,platform,timestamp_iso')
+    .order('created_at',{ascending:false})
+    .limit(50)
+  if(error){ list.textContent = error.message; return }
+  (data||[]).forEach(r => list.append(renderCard(r)))
 }
 
-/*** 6) VERIFY (ECP or hash) ***/
+// ---------- Verify (accepts hash or ECP-…) ----------
+function looksEcp(s){ return /^ECP[-\s]?[A-Z0-9]{6,}$/i.test((s||'').trim()) }
+
 async function doVerify(q){
-  const out = $('#verify-result'); out.innerHTML='';
-  if (!q){ out.textContent='Enter ECP-######## or 64-hex hash'; return; }
+  const out = $('#verify-result'); out.innerHTML=''
+  if(!q){ out.textContent='Enter ECP-… or 64-hex hash'; return }
 
-  // hash path
-  if (isHex64(q)){
-    const { data, error } = await supabase.from('echoprints').select('*').eq('hash', q).limit(1);
-    if (error){ out.textContent=error.message; return; }
-    if (!data?.length){ out.textContent='No match'; return; }
-    out.append(renderCard(data[0])); return;
+  // Try by hash first
+  if(isHex64(q)){
+    const { data, error } = await supabase.from('echoprints').select('*').eq('hash', q).limit(1)
+    if(error){ out.textContent = error.message; return }
+    if(data && data.length){ out.append(renderCard(data[0])); return }
   }
 
-  // ECP path: first try real ecp_id column
-  if (isECP(q)){
-    const qUp = q.toUpperCase().replace(/\s+/g,'');
-    let { data, error } = await supabase.from('echoprints').select('*').eq('ecp_id', qUp).limit(1);
-    if (error){ out.textContent=error.message; return; }
-    if (data?.length){ out.append(renderCard(data[0])); return; }
-
-    // fallback: scan a window of recents and match derived ECP
-    const res = await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(200);
-    if (res.error){ out.textContent=res.error.message; return; }
-    const hit = (res.data||[]).find(r => ecpOf(r).toUpperCase() === qUp);
-    if (hit){ out.append(renderCard(hit)); return; }
-
-    out.textContent='No match'; return;
+  // If ECP code, search recent and match client-side (works even if ecp_id column missing)
+  if(looksEcp(q)){
+    const key = q.toUpperCase().replace(/\s+/g,'')
+    const { data, error } = await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(200)
+    if(error){ out.textContent = error.message; return }
+    const hit = (data||[]).find(r => ecpFrom(r).toUpperCase()===key)
+    if(hit){ out.append(renderCard(hit)); return }
   }
 
-  out.textContent='Not a valid ECP or 64-hex hash';
+  out.textContent = 'No match'
 }
 
-/*** 7) GENERATE: hashing + insert ***/
-async function sha256Text(s){
-  const enc = new TextEncoder().encode(s||'');
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+// ---------- Generate (browser SHA-256 + insert) ----------
+async function sha256HexFromText(s){
+  const enc = new TextEncoder().encode(s)
+  const buf = await crypto.subtle.digest('SHA-256', enc)
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')
 }
-async function sha256File(file){
-  const buf = await file.arrayBuffer();
-  const dig = await crypto.subtle.digest('SHA-256', buf);
-  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+async function sha256HexFromFile(file){
+  const buf = await file.arrayBuffer()
+  const dig = await crypto.subtle.digest('SHA-256', buf)
+  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('')
 }
 
 $('#btnHashText').onclick = async ()=>{
-  const t = $('#g-text').value || '';
-  $('#g-hash').value = t ? await sha256Text(t) : '';
-};
+  const t = $('#g-text').value||''
+  $('#g-hash').value = t ? await sha256HexFromText(t) : ''
+}
 $('#btnHashFile').onclick = async ()=>{
-  const f = $('#g-file').files?.[0]; if(!f) return;
-  $('#g-hash').value = await sha256File(f);
-};
-$('#btnClear').onclick = ()=>{
-  ['g-title','g-permalink','g-media','g-text','g-hash'].forEach(id=>$('#'+id).value='');
-  $('#g-status').textContent='';
-};
+  const f = $('#g-file').files[0]; if(!f) return
+  $('#g-hash').value = await sha256HexFromFile(f)
+}
+$('#btnClear').onclick = ()=>{ ['g-title','g-permalink','g-media','g-text','g-hash'].forEach(id=>$('#'+id).value=''); $('#g-status').textContent='' }
+
 $('#btnInsert').onclick = async ()=>{
-  const title = ($('#g-title').value||'Untitled').trim();
-  const permalink = ($('#g-permalink').value||'').trim() || null;
-  const url = ($('#g-media').value||'').trim() || null;
-  const hash = ($('#g-hash').value||'').trim();
+  const title = ($('#g-title').value||'Untitled').trim()
+  const permalink = ($('#g-permalink').value||'').trim() || null
+  const url = ($('#g-media').value||'').trim() || null
+  const hash = ($('#g-hash').value||'').trim()
 
-  if (!isHex64(hash)){ $('#g-status').textContent='Need a valid 64-hex hash.'; return; }
-  $('#g-status').textContent='Inserting…';
-  const insert = { title, hash, permalink, url, sent_at: new Date().toISOString() };
-  const { error } = await supabase.from('echoprints').insert(insert);
-  if (error){ $('#g-status').textContent=error.message; return; }
-  $('#g-status').textContent='Inserted ✓';
-  await loadRecent();
-};
+  if(!isHex64(hash)){ $('#g-status').textContent='Need a valid 64-hex hash.'; return }
+  $('#g-status').textContent = 'Saving…'
 
-/*** 8) Wire UI ***/
-$('#verify-form').addEventListener('submit', e=>{
-  e.preventDefault();
-  doVerify($('#verify-input').value.trim());
-});
-$('#cert-close').onclick = ()=> $('#cert-modal').close();
-$('#cert-download').onclick = ()=>{
-  try{
-    const obj = JSON.parse($('#cert-pre').textContent || '{}');
-    download(`${obj.ecp_id||'echoprint'}-certificate.json`, JSON.stringify(obj,null,2));
-  }catch{}
-};
+  const row = {
+    title, hash, permalink, url,
+    sent_at: new Date().toISOString()
+  }
+  const { data, error } = await supabase.from('echoprints').insert(row).select().single()
+  if(error){ $('#g-status').textContent = 'Insert failed: '+error.message; return }
+  $('#g-status').textContent = 'Inserted ✓'
+  // show a certificate preview right away
+  openCert({
+    standard:'EchoprintOS v1',
+    ecp_id: ecpFrom(data),
+    title:data.title||null,
+    hash:data.hash||null,
+    timestamps:{ db_created_at:data.created_at||null, sent_at:data.sent_at||null, bitcoin:{anchored:false,status:'pending'} },
+    links:{ permalink:data.permalink||null, media:data.url||null, verify_ui:location.href }
+  })
+  await loadRecent()
+}
 
-/*** 9) Boot ***/
-loadRecent();
-if (!location.hash) location.hash = '#verify';
+// ---------- Wire + boot ----------
+$('#verify-form').addEventListener('submit', e=>{ e.preventDefault(); doVerify($('#verify-input').value.trim()) })
+$('#recent-btn').onclick = ()=>loadRecent()
+$('#clear-btn').onclick  = ()=>{ $('#verify-input').value=''; $('#verify-result').innerHTML='' }
+
+loadRecent()
 </script>
 </body>
 </html>
