@@ -1,67 +1,75 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EchoprintOS</title>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EchoprintOS · Ledger</title>
+  <link rel="stylesheet" href="./theme.css"/>
+  <style>
+    :root{--bg:#0b0c0f;--card:#12141a;--ink:#e9edf1;--muted:#9aa7b7;--accent:#29D9E7;--ink-soft:#cfd6df}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:980px;margin:32px auto;padding:0 16px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .brand{display:flex;gap:.6rem;align-items:center;font-weight:800}
+    .sprout{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#37f2a5, #29D9E7)}
+    .nav a{color:var(--ink-soft);text-decoration:none;margin-left:14px}
+    .hero{background:var(--card);border:1px solid #1c2230;border-radius:16px;padding:22px}
+    h1{margin:0 0 .4rem;font-size:2.2rem}
+    .lead{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:var(--card);border:1px solid #1c2230;border-radius:16px;padding:18px}
+    .row{display:flex;gap:10px}
+    input{width:100%;background:#0e1016;color:var(--ink);border:1px solid #243046;border-radius:10px;padding:12px}
+    button{border:0;border-radius:10px;padding:12px 16px;font-weight:600;cursor:pointer}
+    .primary{background:var(--accent);color:#001018}
+    .ghost{background:#141822;color:var(--ink);border:1px solid #283246}
+    .muted{color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .feed{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:700px){.feed{grid-template-columns:1fr 1fr}}
+    .item{border:1px solid #1c2230;border-radius:12px;padding:12px}
+    .item h4{margin:.1rem 0 .4rem;font-size:1rem}
+    .tiny{font-size:.85rem}
+    .ok{color:#7ef3c4}.err{color:#ff8c8c}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><div class="sprout"></div><div>EchoprintOS</div></div>
+      <nav class="nav">
+        <a href="/ledger/capture.html">Capture</a>
+        <a href="/ledger/">Ledger</a>
+        <a href="https://echoprintos.org" target="_blank">About</a>
+      </nav>
+    </header>
 
-    <!-- Inline dark theme so styling never gets skipped -->
-    <style>
-      :root{
-        --bg:#0b0f14; --panel:#10151c; --card:#121a22;
-        --muted:#a9b4c0; --text:#e6edf3; --accent:#2f81f7; --ring:#2f81f7;
-        --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
-        --sans:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      }
-      *{box-sizing:border-box} html,body{height:100%}
-      body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
-      a{color:var(--accent);text-decoration:none}
-      .container{max-width:880px;margin:32px auto;padding:12px}
-      .hero{background:var(--panel);border:1px solid #1e2630;border-radius:16px;padding:24px 20px;margin-bottom:20px}
-      h1{font-size:44px;margin:0 0 12px} h2{margin:0 0 8px}
-      .muted{color:var(--muted)} .small{font-size:12px}
-      .row{display:flex;gap:10px}
-      input{flex:1;background:#0e151c;border:1px solid #1e2630;color:var(--text);border-radius:10px;padding:12px 14px;outline:0}
-      input:focus{border-color:var(--ring);box-shadow:0 0 0 2px color-mix(in oklab,var(--ring) 30%,transparent)}
-      .btn{border:1px solid #273344;background:var(--panel);color:var(--text);padding:12px 16px;border-radius:10px}
-      .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-      .panel{background:var(--panel);border:1px solid #1e2630;border-radius:16px;padding:16px 14px;margin-bottom:16px}
-      .grid{display:grid;grid-template-columns:1fr;gap:12px}
-      @media(min-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
-      .card{background:var(--card);border:1px solid #1f2a34;border-radius:14px;padding:14px}
-      .card h3{margin:0 0 6px;font-size:16px}
-      .kv{display:grid;grid-template-columns:120px 1fr;gap:8px 12px}
-      .kv .k{color:var(--muted)} .kv .v{font-family:var(--mono);word-break:break-all}
-      .mono{font-family:var(--mono)}
-    </style>
-  </head>
-  <body>
-    <main class="container">
-      <header class="hero">
-        <h1>EchoprintOS</h1>
-        <p class="muted">
-          Generate a hash, verify by ECP or 64-hex hash, and browse recent records.
-        </p>
-      </header>
+    <section class="hero">
+      <h1>EchoprintOS</h1>
+      <p class="lead">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+    </section>
 
-      <section class="panel">
-        <h2>Verify</h2>
+    <section class="grid">
+      <div class="card" id="verifySection">
+        <h2 style="margin:0 0 .6rem">Verify</h2>
         <div class="row">
-          <input id="q" placeholder="ECP-XXXXXXXX or 64-hex hash" />
-          <button id="btnVerify" class="btn btn-primary">Verify</button>
-          <button id="btnRecent" class="btn">Recent</button>
+          <input id="q" placeholder="ECP-XXXXXXXX or 64-hex hash"/>
+          <button class="primary" id="btnVerify">Verify</button>
+          <button class="ghost" id="btnClear">Clear</button>
         </div>
-        <div id="status" class="small muted" style="margin-top:8px;"></div>
-        <div id="verify-result" style="margin-top:12px;"></div>
-      </section>
+        <div id="verifyResult" class="tiny muted" style="margin-top:10px"></div>
+      </div>
 
-      <section class="panel">
-        <h2>Recent</h2>
-        <div id="feed" class="grid"></div>
-      </section>
-    </main>
+      <div class="card">
+        <h2 style="margin:0 0 .6rem">Recent</h2>
+        <div id="recent" class="feed"></div>
+        <div class="tiny muted" id="recentStatus" style="margin-top:6px"></div>
+      </div>
+    </section>
+  </div>
 
-    <!-- JS (uses your existing env.js in /ledger) -->
-    <script type="module" src="app.js?v=7"></script>
-  </body>
+  <script src="./env.js"></script>
+  <script src="./app.js"></script>
+</body>
 </html>
