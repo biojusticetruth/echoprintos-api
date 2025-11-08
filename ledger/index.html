@@ -1,103 +1,137 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EchoprintOS — Verify & Generate</title>
-  <link rel="stylesheet" href="/ledger/assets/css/base.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EchoprintOS — Generate • Verify • Recent</title>
+
+  <!-- Inline dark theme + layout (no external CSS needed) -->
   <style>
-    body{font:16px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Inter,Arial}
-    main{max-width:860px;margin:24px auto;padding:0 16px}
-    h1{font-weight:700;margin:8px 0 20px}
-    .pane{border:1px solid #e5e7eb;border-radius:12px;padding:18px 16px;margin:18px 0}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    input,textarea,button{font:inherit}
-    input,textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:10px 12px}
-    button{border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;background:#fff}
-    button.primary{background:#111;color:#fff;border-color:#111}
-    .cards{display:grid;grid-template-columns:1fr;gap:12px}
-    .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px}
-    .card header{display:flex;justify-content:space-between;gap:12px;align-items:center}
-    .meta{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:8px 0 10px}
-    .meta dt{color:#6b7280}
-    nav.actions{display:flex;gap:8px;flex-wrap:wrap}
-    dialog{border:none;border-radius:12px;padding:0;max-width:720px;width:min(92vw,720px)}
-    .modal{padding:14px 16px}
-    .close{float:right}
-    small.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    :root { color-scheme: light dark; }
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;background:#0b0c10;color:#e8eaed;font:16px/1.5 system-ui, -apple-system, Segoe UI, Inter, Arial}
+    a{color:#8ab4f8;text-decoration:none}
+    h1,h2,h3{margin:8px 0 10px}
+    .wrap{width:min(980px,100% - 24px);margin:24px auto}
+    /* panels */
+    section,.panel{padding:14px;margin:12px 0;border-radius:12px;border:1px solid #2a2f38;background:#0f1318}
+    /* inputs */
+    input,textarea,select{width:100%;max-width:100%;padding:10px 12px;background:#0e1116;color:#e8eaed;border:1px solid #2c313a;border-radius:10px}
+    input::placeholder,textarea::placeholder{color:#828b93}
+    /* buttons */
+    button{background:#1f6feb;color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
+    button:disabled{background:#2b2f36;color:#9aa0a6}
+    .muted{color:#9aa0a6;font-size:13px}
+    /* grids / cards */
+    #recent-list{display:grid;grid-template-columns:1fr;gap:14px}
+    @media (min-width:760px){#recent-list{grid-template-columns:1fr 1fr}}
+    article.card{position:relative;padding:14px;border-radius:14px;border:1px solid #28303a;background:#0f1318}
+    .title{margin:0 0 8px;font-weight:600;color:#e8eaed}
+    .ecp{position:absolute;top:10px;right:12px;background:#0d1117;color:#8ab4f8;border:1px solid #2b3038;padding:2px 10px;border-radius:999px;font-weight:600;letter-spacing:.3px}
+    .hash,.ts{font:12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;color:#c3c8cf;word-break:break-all;line-height:1.35;margin:2px 0 6px}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .actions button{flex:1 1 calc(50% - 8px);padding:10px}
+    @media (min-width:760px){.actions button{flex:0 0 auto}}
+    /* simple rows */
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .col2{display:grid;grid-template-columns:1fr;gap:10px}
+    @media (min-width:680px){.col2{grid-template-columns:1fr 1fr}}
+    /* dialog */
+    dialog#cert-modal{border:0;border-radius:12px;padding:0;max-width:min(760px,92vw)}
+    .dlg{background:#fff;color:#111;border-radius:12px;padding:16px}
+    .dlg h3{margin:0 0 6px}
+    .dlg pre{max-height:60vh;overflow:auto;background:#f5f6f7;border:1px solid #e3e5e8;border-radius:8px;padding:10px;color:#111}
+    @media (prefers-color-scheme:dark){
+      dialog#cert-modal{background:transparent}
+      .dlg{background:#0f1318;color:#e8eaed;border:1px solid #2a2f38}
+      .dlg pre{background:#0b0e12;color:#cbd1d8;border:1px solid #28303a}
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>🔎 EchoprintOS — Verify & Recent</h1>
+  <main class="wrap">
+    <header class="panel">
+      <h1 style="margin:0">EchoprintOS</h1>
+      <p class="muted" style="margin:6px 0 0">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+    </header>
 
     <!-- GENERATE -->
-    <section class="pane" id="generate">
-      <h2>Generate (hash + Bitcoin stamp)</h2>
-      <div class="row">
-        <input id="g-title" placeholder="Title (required)"/>
-        <input id="g-permalink" placeholder="Permalink (optional — where this lives)"/>
-        <input id="g-media" placeholder="Media URL (optional — image/video link)"/>
+    <section id="generate" class="panel">
+      <h2>Generate</h2>
+      <div class="col2">
+        <div>
+          <label class="muted">Title</label>
+          <input id="g-title" placeholder="Untitled">
+        </div>
+        <div>
+          <label class="muted">Permalink (optional)</label>
+          <input id="g-permalink" placeholder="https://…">
+        </div>
+        <div>
+          <label class="muted">Media URL (optional)</label>
+          <input id="g-media" placeholder="https://…/image.jpg">
+        </div>
       </div>
 
-      <h3>Hash from TEXT</h3>
-      <textarea id="g-text" rows="4" placeholder="Paste any content to hash…"></textarea>
-      <div class="row">
-        <button id="btnHashText">Hash Text → SHA-256</button>
+      <div class="panel" style="margin-top:12px">
+        <div class="col2">
+          <div>
+            <label class="muted">Hash from TEXT (SHA-256)</label>
+            <textarea id="g-text" placeholder="Paste any content to hash…"></textarea>
+            <div class="row" style="margin-top:8px"><button id="btnHashText">Hash Text → SHA-256</button></div>
+          </div>
+          <div>
+            <label class="muted">Hash from FILE (SHA-256)</label>
+            <input id="g-file" type="file" accept="*/*">
+            <div class="row" style="margin-top:8px"><button id="btnHashFile">Hash File → SHA-256</button></div>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label class="muted">Or paste an existing 64-hex hash</label>
+          <input id="g-hash" placeholder="6f1a…">
+        </div>
       </div>
 
-      <h3>Hash from FILE</h3>
       <div class="row">
-        <input type="file" id="g-file" />
-        <button id="btnHashFile">Hash File → SHA-256</button>
-      </div>
-
-      <h3>Use existing 64-hex hash</h3>
-      <div class="row">
-        <input id="g-hash" placeholder="ac5c01f3… (64 hex)"/>
-      </div>
-
-      <div class="row">
-        <button id="btnInsert" class="primary">Insert (+ Bitcoin stamp)</button>
+        <button id="btnInsert">Insert into EchoprintOS</button>
         <button id="btnClear">Clear</button>
       </div>
-
-      <p id="g-status"></p>
+      <div id="g-status" class="muted" style="margin-top:8px"></div>
     </section>
 
     <!-- VERIFY -->
-    <section id="verify" class="pane">
+    <section id="verify" class="panel">
       <h2>Verify</h2>
-      <form id="verify-form" class="row" onsubmit="return false;">
+      <form id="verify-form" class="row">
         <input id="verify-input" inputmode="text" autocomplete="off"
-               placeholder="Enter EchoprintOS Record ID (ECP-…) or 64-hex hash" />
-        <button id="verify-btn" class="primary" type="submit">Verify</button>
-        <button id="recent-btn" type="button">Recent</button>
+               placeholder="Enter EchoprintOS Record ID (ECP-…) or 64-hex hash">
+        <button id="verify-btn" type="submit">Verify</button>
         <button id="clear-btn" type="button">Clear</button>
       </form>
-      <div id="verify-result"></div>
+      <div id="verify-result" style="margin-top:12px"></div>
     </section>
 
     <!-- RECENT -->
-    <section id="recent" class="pane">
-      <h2>Recent</h2>
-      <div id="recent-list" class="cards"></div>
+    <section id="recent" class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Recent</h2>
+        <button id="recent-btn" type="button">Refresh</button>
+      </div>
+      <div id="recent-list" style="margin-top:12px"></div>
     </section>
   </main>
 
-  <!-- Card template -->
+  <!-- Card template used by app.js -->
   <template id="card-template">
     <article class="card">
       <header>
         <h3 class="title"></h3>
-        <small class="ecp mono"></small>
+        <small class="ecp"></small>
       </header>
-
       <dl class="meta">
-        <dt>Hash</dt><dd class="hash mono"></dd>
-        <dt>Timestamp</dt><dd class="ts mono"></dd>
+        <dt class="muted">Hash</dt><dd class="hash"></dd>
+        <dt class="muted">Timestamp</dt><dd class="ts"></dd>
       </dl>
-
       <nav class="actions">
         <button class="open-post"      hidden>Open post</button>
         <button class="view-image"     hidden>View image</button>
@@ -109,15 +143,19 @@
     </article>
   </template>
 
-  <!-- Certificate modal -->
-  <dialog id="cert-modal"><div class="modal">
-    <button class="close" onclick="this.closest('dialog').close()">✕</button>
-    <h3>Certificate</h3>
-    <pre id="cert-pre" style="white-space:pre-wrap"></pre>
-  </div></dialog>
+  <!-- Simple certificate dialog used by app.js -->
+  <dialog id="cert-modal">
+    <div class="dlg">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <h3 style="margin:0">Echoprint Certificate</h3>
+        <button onclick="this.closest('dialog').close()">Close</button>
+      </div>
+      <pre id="cert-pre">{}</pre>
+    </div>
+  </dialog>
 
-<!-- Load environment (Supabase URL + key) -->
-<script src="/ledger/env.js?v=37"></script>
-<script type="module" src="/ledger/app.js?v=37"></script>
+  <!-- Load environment (Supabase URL + anon key), then your app code -->
+  <script src="/ledger/env.js?v=37"></script>
+  <script type="module" src="/ledger/app.js?v=37"></script>
 </body>
 </html>
