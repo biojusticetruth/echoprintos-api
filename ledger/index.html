@@ -71,10 +71,10 @@
             </div>
           </div>
           <div>
-            <span class="label">Hash</span>
-            <div class="copyline">
-              <input class="mono hash" readonly>
-              <button class="copy">Copy</button>
+            <div class="card">
+  <div class="mono">${rec.ecp_id}</div>
+  <div class="muted">${formatUTC(rec.timestamp_iso || rec.timestamp_human_utc)}</div>
+  <div class="card-hash mono">${rec.hash}</div> <!-- hidden on feed -->
             </div>
           </div>
         </div>
