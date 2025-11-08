@@ -16,6 +16,19 @@
     input,select,textarea{
       width:100%;box-sizing:border-box;background:#0e1016;color:var(--ink);
       border:1px solid #243046;border-radius:10px;padding:12px 12px;font-size:1rem;outline:none
+      <!-- Site header (shared) -->
+<header style="display:flex;align-items:center;justify-content:space-between;margin:24px auto 12px;max-width:980px;padding:0 16px;">
+  <div style="display:flex;gap:.6rem;align-items:center;font-weight:800">
+    <div style="width:18px;height:18px;border-radius:50%;
+                background:linear-gradient(135deg,#37f2a5,#29D9E7)"></div>
+    <div>EchoprintOS</div>
+  </div>
+  <nav style="display:flex;gap:14px;">
+    <a href="/ledger/" style="color:#cfd6df;text-decoration:none">Ledger</a>
+    <a href="/ledger/capture.html" style="color:#cfd6df;text-decoration:none">Capture</a>
+    <a href="https://echoprintos.org" target="_blank" style="color:#cfd6df;text-decoration:none">About</a>
+  </nav>
+</header>
     }
     textarea{min-height:92px;resize:vertical}
     .row{display:flex;gap:12px}
