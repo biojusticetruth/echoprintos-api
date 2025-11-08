@@ -1,26 +1,63 @@
 :root{
-  --bg:#0b0f14; --panel:#10151c; --card:#121a22;
-  --muted:#a9b4c0; --text:#e6edf3; --accent:#2f81f7; --ring:#2f81f7;
-  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
-  --sans:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  --bg:#0b0f14;            /* page background */
+  --panel:#0f141b;         /* card background */
+  --border:#1b2734;
+  --ink:#e9f1fb;
+  --muted:#a6b5c7;
+  --brand:#7ef3c4;         /* sprout green */
+  --accent:#20e1d2;        /* button cyan */
 }
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
-a{color:var(--accent);text-decoration:none}
-.container{max-width:880px;margin:32px auto;padding:12px}
-.hero{background:var(--panel);border:1px solid #1e2630;border-radius:16px;padding:24px 20px;margin-bottom:20px}
-h1{font-size:44px;margin:0 0 12px} h2{margin:0 0 8px}
-.muted{color:var(--muted)} .small{font-size:12px}
-.row{display:flex;gap:10px}
-input{flex:1;background:#0e151c;border:1px solid #1e2630;color:var(--text);border-radius:10px;padding:12px 14px;outline:0}
-input:focus{border-color:var(--ring);box-shadow:0 0 0 2px color-mix(in oklab,var(--ring) 30%,transparent)}
-.btn{border:1px solid #273344;background:var(--panel);color:var(--text);padding:12px 16px;border-radius:10px}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.panel{background:var(--panel);border:1px solid #1e2630;border-radius:16px;padding:16px 14px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:1fr;gap:12px}
-@media(min-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
-.card{background:var(--card);border:1px solid #1f2a34;border-radius:14px;padding:14px}
-.card h3{margin:0 0 6px;font-size:16px}
-.kv{display:grid;grid-template-columns:120px 1fr;gap:8px 12px}
-.kv .k{color:var(--muted)} .kv .v{font-family:var(--mono);word-break:break-all}
-.mono{font-family:var(--mono)}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font:16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color:var(--ink); background:var(--bg);
+}
+
+/* ------- sticky site header (on every page) ------- */
+.site-nav{
+  position:sticky; top:0; z-index:1000;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; margin:8px;
+  background:#0b0f14cc; backdrop-filter:saturate(120%) blur(6px);
+  border:1px solid var(--border); border-radius:12px;
+}
+.site-nav .brand{display:flex; align-items:center; gap:.5rem;
+  color:var(--brand); text-decoration:none; font-weight:800; letter-spacing:.2px}
+.site-nav nav a{margin-left:16px; color:#cfe7ff; text-decoration:none}
+.site-nav nav a:hover{color:var(--brand)}
+
+/* ------- layout ------- */
+.page{max-width:980px; margin:16px auto 56px; padding:0 16px}
+.hero{margin:12px 0 20px}
+.card{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:16px; padding:16px; margin:16px 0;
+  box-shadow:0 0 0 1px rgba(0,0,0,.06) inset;
+}
+.title{font-size:clamp(28px,6vw,52px); font-weight:900; margin:0 0 6px}
+.blurb{color:var(--muted); max-width:64ch}
+
+/* ------- form bits ------- */
+.row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+input[type="text"], input[type="url"]{
+  width:100%; max-width:520px; padding:.8rem .9rem; border-radius:12px;
+  background:#0b1016; border:1px solid var(--border); color:var(--ink);
+}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  padding:.75rem 1.15rem; border-radius:12px; border:1px solid var(--border);
+  font-weight:700; cursor:pointer; text-decoration:none; color:var(--ink);
+  background:#10161e;
+}
+.btn-primary{background:var(--accent); color:#051019; border-color:#0aaea4}
+.btn-ghost{background:#0b1016}
+.btn:disabled{opacity:.6; cursor:not-allowed}
+
+/* ------- small helpers ------- */
+.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+.muted{color:var(--muted)}
+.tiny{font-size:.85rem; color:var(--muted)}
+.item{padding:12px 0; border-top:1px dashed var(--border)}
+.item:first-child{border-top:0}
