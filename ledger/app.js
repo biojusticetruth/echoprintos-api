@@ -8,7 +8,34 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // API host (same origin if you deployed /api/record and /api/verify on Vercel)
 const API = location.origin;
+// Modal refs (top-level in app.js)
+const certModal = document.querySelector('#cert-modal');
+const certBody  = document.querySelector('#cert-body');
 
+function renderCertificate(row) {
+  const ecpl = row.record_id || '(pending id)';
+  const btc  = row.bitcoin?.anchored ? 'anchored' : (row.bitcoin ? 'pending' : '—');
+  certBody.innerHTML = `
+    <div class="card">
+      <div class="ecp">${ecpl}</div>
+      <h3 class="title">${row.title || 'Untitled'}</h3>
+      <div class="hash"><strong>Hash:</strong> ${row.hash}</div>
+      <div class="ts"><strong>Timestamp (UTC):</strong> ${
+        new Date(row.timestamp || row.db_created_at || Date.now())
+          .toISOString().replace('T',' ').replace('Z',' UTC')
+      }</div>
+      <div class="ts"><strong>Bitcoin:</strong> ${btc}</div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="open-verify">Open in Verify</button>
+        <button class="btn-ghost" id="dl-json">Download JSON</button>
+      </div>
+    </div>`;
+  certModal.showModal();
+}
+
+// close buttons
+document.querySelector('#cert-close')?.addEventListener('click', ()=>certModal.close());
+document.querySelector('#cert-dismiss')?.addEventListener('click', ()=>certModal.close());
 // Shorthand DOM helpers
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
