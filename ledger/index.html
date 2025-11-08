@@ -1,28 +1,80 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EchoprintOS</title>
   <link rel="stylesheet" href="/ledger/theme.css">
 </head>
 <body>
-  <header class="hero panel">
-    <h1>EchoprintOS</h1>
-    <p>Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
-  </header>
+  <main class="wrap">
+    <section class="panel hero">
+      <h1>EchoprintOS</h1>
+      <p class="muted">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+    </section>
 
-  <main>
+    <!-- Generate -->
+    <section class="panel">
+      <h2>Generate</h2>
+      <div class="grid-2">
+        <label class="field">
+          <span>Title</span>
+          <input id="gen-title" placeholder="Untitled">
+        </label>
+        <label class="field">
+          <span>Permalink (optional)</span>
+          <input id="gen-link" placeholder="https://…">
+        </label>
+        <label class="field">
+          <span>Media URL (optional)</span>
+          <input id="gen-media" placeholder="https://…/image.jpg">
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Hash from TEXT (SHA-256)</span>
+          <textarea id="gen-text" rows="4" placeholder="Paste any content to hash…"></textarea>
+          <div class="row">
+            <button id="btn-hash-text" class="btn">Hash Text → SHA-256</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Hash from FILE (SHA-256)</span>
+          <input id="gen-file" type="file">
+          <div class="row">
+            <button id="btn-hash-file" class="btn">Hash File → SHA-256</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Computed Hash</span>
+          <input id="gen-hash" class="mono" placeholder="(computed 64-hex)" readonly>
+        </label>
+        <div class="field compact-actions">
+          <span>&nbsp;</span>
+          <div class="row">
+            <button id="btn-save"   class="btn btn-success" disabled>Save to Ledger</button>
+            <button id="btn-anchor" class="btn btn-ghost" disabled>Anchor to Bitcoin</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Verify -->
     <section class="panel">
       <h2>Verify</h2>
       <input id="verify-input" class="input" placeholder="ECP-XXXXXXXX or 64-hex hash">
-      <div class="row mt8">
-        <button id="verify-btn" class="btn btn-primary">Verify</button>
-        <button id="recent-btn" class="btn btn-ghost">Recent</button>
+      <div class="row">
+        <button id="verify-btn"  class="btn">Verify</button>
+        <button id="recent-btn"  class="btn btn-ghost">Recent</button>
       </div>
-      <div id="verify-result" class="mt12"></div>
+      <div id="verify-result" class="stack"></div>
     </section>
 
+    <!-- Recent -->
     <section class="panel">
       <h2>Recent</h2>
       <div id="recent-list" class="cards"></div>
@@ -32,18 +84,16 @@
   <!-- Certificate modal -->
   <dialog id="cert-modal" class="modal">
     <div class="modal-head">
-      <strong>Echoprint Certificate</strong>
-      <button id="cert-close" class="btn btn-ghost sm">Close</button>
+      <strong class="title">Echoprint Certificate</strong>
+      <button id="cert-close" class="close">Close</button>
     </div>
     <div id="cert-body" class="modal-body"></div>
     <div class="modal-actions">
-      <button id="cert-open"   class="btn btn-primary">Open in Verify</button>
-      <button id="cert-json"   class="btn">Download JSON</button>
+      <button id="cert-open" class="btn">Open in Verify</button>
+      <button id="cert-json" class="btn btn-ghost">Download JSON</button>
     </div>
   </dialog>
 
-  <!-- env must load before app.js -->
-  <script src="/ledger/env.js"></script>
   <script type="module" src="/ledger/app.js"></script>
 </body>
 </html>
