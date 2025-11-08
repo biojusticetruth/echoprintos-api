@@ -1,99 +1,91 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>EchoprintOS</title>
-  <link rel="stylesheet" href="/ledger/theme.css">
+  <link rel="stylesheet" href="/ledger/theme.css"/>
 </head>
 <body>
   <main class="wrap">
-    <section class="panel hero">
+
+    <section class="hero card">
       <h1>EchoprintOS</h1>
-      <p class="muted">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+      <p>Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
     </section>
 
     <!-- Generate -->
     <section class="panel">
       <h2>Generate</h2>
-      <div class="grid-2">
-        <label class="field">
-          <span>Title</span>
-          <input id="gen-title" placeholder="Untitled">
-        </label>
-        <label class="field">
-          <span>Permalink (optional)</span>
-          <input id="gen-link" placeholder="https://…">
-        </label>
-        <label class="field">
-          <span>Media URL (optional)</span>
-          <input id="gen-media" placeholder="https://…/image.jpg">
-        </label>
+
+      <label class="lbl">Title
+        <input id="title" placeholder="Untitled"/>
+      </label>
+
+      <label class="lbl">Permalink (optional)
+        <input id="permalink" placeholder="https://…"/>
+      </label>
+
+      <label class="lbl">Media URL (optional)
+        <input id="media" placeholder="https://…/image.jpg"/>
+      </label>
+
+      <h3>Hash from TEXT (SHA-256)</h3>
+      <textarea id="text" rows="5" placeholder="Paste any content to hash…"></textarea>
+      <div class="row">
+        <button id="hash-text" class="btn">Hash Text → SHA-256</button>
       </div>
 
-      <div class="grid-2">
-        <label class="field">
-          <span>Hash from TEXT (SHA-256)</span>
-          <textarea id="gen-text" rows="4" placeholder="Paste any content to hash…"></textarea>
-          <div class="row">
-            <button id="btn-hash-text" class="btn">Hash Text → SHA-256</button>
-          </div>
-        </label>
-        <label class="field">
-          <span>Hash from FILE (SHA-256)</span>
-          <input id="gen-file" type="file">
-          <div class="row">
-            <button id="btn-hash-file" class="btn">Hash File → SHA-256</button>
-          </div>
-        </label>
+      <h3>Hash from FILE (SHA-256)</h3>
+      <input id="file" type="file"/>
+      <div class="row">
+        <button id="hash-file" class="btn">Hash File → SHA-256</button>
       </div>
 
-      <div class="grid-2">
-        <label class="field">
-          <span>Computed Hash</span>
-          <input id="gen-hash" class="mono" placeholder="(computed 64-hex)" readonly>
-        </label>
-        <div class="field compact-actions">
-          <span>&nbsp;</span>
-          <div class="row">
-            <button id="btn-save"   class="btn btn-success" disabled>Save to Ledger</button>
-            <button id="btn-anchor" class="btn btn-ghost" disabled>Anchor to Bitcoin</button>
-          </div>
-        </div>
+      <label class="lbl">Computed Hash
+        <input id="hash" readonly placeholder="(computed 64-hex)"/>
+      </label>
+
+      <div class="row">
+        <button id="save" class="btn btn-success">Save to Ledger</button>
+        <button id="btc" class="btn" disabled>Anchor to Bitcoin</button>
       </div>
     </section>
 
     <!-- Verify -->
     <section class="panel">
       <h2>Verify</h2>
-      <input id="verify-input" class="input" placeholder="ECP-XXXXXXXX or 64-hex hash">
+      <input id="verify-input" placeholder="ECP-XXXXXXX or 64-hex hash"/>
       <div class="row">
-        <button id="verify-btn"  class="btn">Verify</button>
-        <button id="recent-btn"  class="btn btn-ghost">Recent</button>
+        <button id="verify-btn" class="btn">Verify</button>
+        <button id="recent-btn" class="btn btn-ghost">Recent</button>
       </div>
-      <div id="verify-result" class="stack"></div>
+      <div id="verify-result"></div>
     </section>
 
     <!-- Recent -->
     <section class="panel">
       <h2>Recent</h2>
-      <div id="recent-list" class="cards"></div>
+      <div id="recent-list"></div>
     </section>
+
   </main>
 
   <!-- Certificate modal -->
-  <dialog id="cert-modal" class="modal">
+  <dialog id="cert-modal">
     <div class="modal-head">
-      <strong class="title">Echoprint Certificate</strong>
+      <strong>Echoprint Certificate</strong>
       <button id="cert-close" class="close">Close</button>
     </div>
     <div id="cert-body" class="modal-body"></div>
     <div class="modal-actions">
-      <button id="cert-open" class="btn">Open in Verify</button>
-      <button id="cert-json" class="btn btn-ghost">Download JSON</button>
+      <button id="open-verify" class="btn">Open in Verify</button>
+      <button id="dl-json" class="btn btn-ghost">Download JSON</button>
     </div>
   </dialog>
 
+  <!-- Env & App -->
+  <script src="/ledger/env.js"></script>
   <script type="module" src="/ledger/app.js"></script>
 </body>
 </html>
