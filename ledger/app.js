@@ -1,199 +1,202 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_ANON, ANCHOR_ENDPOINT, UPGRADE_ENDPOINT } from './env.js';
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = window._env;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---------- helpers ----------
 const $ = (q) => document.querySelector(q);
-const byId = (x) => document.getElementById(x);
-const fmtTs = (row) => {
-  const raw = row.timestamp || row.created_at || row.inserted_at || row.db_created_at;
-  try { return new Date(raw || Date.now()).toISOString().replace('T',' ').replace('Z',' UTC'); }
-  catch { return '—'; }
-};
-const btcStatus = (row) => {
-  if (row.bitcoin_anchored_at) return 'anchored';
-  if (row.bitcoin_receipt_b64 || row.bitcoin_receipt) return 'pending';
-  return '—';
-};
-const ecpOf = (row) => row.record_id || row.ecp_id || 'ECP-—';
+const bytesToHex = (buf) => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+async function sha256Bytes(bytes){ return await crypto.subtle.digest("SHA-256", bytes); }
+async function sha256Text(txt){ return await sha256Bytes(new TextEncoder().encode(txt)); }
+async function sha256File(file){ return await sha256Bytes(await file.arrayBuffer()); }
 
-// compose downloadable cert JSON
-const buildCert = (row) => ({
-  standard: 'EchoprintOS v1',
-  ecp_id: ecpOf(row),
-  title: row.title || 'Untitled',
-  hash: row.hash || null,
-  timestamps: {
-    created_at: row.timestamp || row.created_at || null,
-    bitcoin: { anchored: !!row.bitcoin_anchored_at, anchored_at: row.bitcoin_anchored_at || null }
-  },
-  links: {
-    permalink: row.permalink || row.link || null,
-    media: row.media_url || null,
-    verify_ui: location.origin
-  }
-});
-
-// ---------- renderers ----------
-function card(row){
-  const ts = fmtTs(row);
-  const btc = btcStatus(row);
-  return `
-  <article class="card" data-ecp="${ecpOf(row)}" data-hash="${row.hash || ''}">
-    <div class="card-head">
-      <div class="title">${row.title || 'Untitled'} <span class="pill">${ecpOf(row)}</span></div>
-    </div>
-    <div class="meta"><strong>Hash:</strong> ${row.hash || '—'}</div>
-    <div class="meta"><strong>Timestamp (UTC):</strong> ${ts}</div>
-    <div class="meta"><strong>Bitcoin:</strong> ${btc}</div>
-    <div class="actionbar">
-      <button class="btn view-cert">View certificate</button>
-      <button class="btn btn-ghost dl-json">Download JSON</button>
-    </div>
-  </article>`;
+function safeTs(row){
+  const t = row.timestamp || row.created_at || row.db_created_at;
+  try{ return new Date(t).toISOString().replace("T"," ").replace("Z"," UTC"); }catch(_){ return "—"; }
+}
+function btcStatus(row){
+  if (row.bitcoin_anchored_at) return "anchored";
+  if (row.bitcoin_receipt_b64) return "pending";
+  return "—";
 }
 
-function renderList(list, into){
-  into.innerHTML = list.map(card).join('');
-  // wire buttons
-  into.querySelectorAll('.view-cert').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      const art = e.target.closest('article');
-      const ecp = art.dataset.ecp;
-      const hash = art.dataset.hash;
-      const row = list.find(r => ecpOf(r)===ecp) || { title:'', hash, record_id: ecp };
-      openCert(row);
-    });
-  });
-  into.querySelectorAll('.dl-json').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      const art = e.target.closest('article');
-      const ecp = art.dataset.ecp;
-      const row = list.find(r => ecpOf(r)===ecp);
-      downloadJSON(buildCert(row), `${ecp}.json`);
-    });
-  });
+// ---------- UI elements ----------
+const el = {
+  title: $("#title"), link: $("#permalink"), media: $("#media"),
+  text: $("#text"), file: $("#file"),
+  hashBtn: $("#hash-text"), hashFileBtn: $("#hash-file"),
+  hashOut: $("#hash"),
+  save: $("#save"), btc: $("#btc"),
+  verifyIn: $("#verify-input"), verifyBtn: $("#verify-btn"),
+  verifyResult: $("#verify-result"),
+  recentBtn: $("#recent-btn"), recentList: $("#recent-list"),
+  modal: $("#cert-modal"), certBody: $("#cert-body"),
+  openVerify: $("#open-verify"), dlJson: $("#dl-json"),
+  closeModal: $("#cert-close")
+};
+
+let lastRowForModal = null;
+
+// ---------- hashing ----------
+el.hashBtn.onclick = async () => {
+  const txt = el.text.value.trim();
+  if (!txt) { el.hashOut.value = ""; return; }
+  const hex = bytesToHex(await sha256Text(txt));
+  el.hashOut.value = hex;
+};
+
+el.hashFileBtn.onclick = async () => {
+  const f = el.file.files?.[0];
+  if (!f) return;
+  const hex = bytesToHex(await sha256File(f));
+  el.hashOut.value = hex;
+};
+
+// ---------- save to ledger ----------
+el.save.onclick = async () => {
+  const hash = el.hashOut.value.trim();
+  if (!/^[a-f0-9]{64}$/i.test(hash)) { alert("Compute a valid 64-hex hash first."); return; }
+
+  const { data, error } = await db.from("echoprints").insert({
+    title: el.title.value?.trim() || "Untitled",
+    permalink: el.link.value?.trim() || null,
+    media_url: el.media.value?.trim() || null,
+    hash,
+  }).select("id, record_id, title, hash, created_at, timestamp, permalink, media_url, bitcoin_receipt_b64, bitcoin_anchored_at").single();
+
+  if (error) { alert("Save failed: "+error.message); return; }
+
+  // enable BTC anchoring & refresh list
+  el.btc.disabled = false;
+  el.btc.dataset.hash = data.hash;
+  await loadRecent();
+  renderVerifyResult(data);
+};
+
+// ---------- anchor to bitcoin (OTS) ----------
+el.btc.onclick = async () => {
+  const hash = el.btc.dataset.hash || el.hashOut.value.trim();
+  if (!/^[a-f0-9]{64}$/i.test(hash)) { alert("Need a saved 64-hex hash."); return; }
+
+  // 1) ask serverless to stamp
+  const r = await fetch("/api/anchor", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ hash }) });
+  const j = await r.json();
+  if (!r.ok) { alert("Anchor error: "+(j.error || r.status)); return; }
+
+  // 2) store receipt (pending)
+  await db.from("echoprints").update({ bitcoin_receipt_b64: j.receipt_b64 }).eq("hash", hash);
+
+  // 3) try upgrade once (it will stay pending until chain confirms)
+  try {
+    const up = await fetch("/api/upgrade", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ receipt_b64: j.receipt_b64 }) });
+    const uj = await up.json();
+    if (up.ok && uj.anchored_at) {
+      await db.from("echoprints").update({ bitcoin_anchored_at: uj.anchored_at }).eq("hash", hash);
+    }
+  } catch(_) {}
+
+  await loadRecent();
+  alert("Anchoring requested. It may show as pending until confirmed.");
+};
+
+// ---------- verify ----------
+el.verifyBtn.onclick = async () => {
+  const q = el.verifyIn.value.trim();
+  if (!q) return;
+
+  let qry = db.from("echoprints")
+    .select("id, record_id, title, hash, created_at, timestamp, permalink, media_url, bitcoin_receipt_b64, bitcoin_anchored_at")
+    .limit(1);
+
+  if (/^ECP-[A-Z0-9]+$/i.test(q)) {
+    qry = qry.eq("record_id", q);
+  } else if (/^[a-f0-9]{64}$/i.test(q)) {
+    qry = qry.eq("hash", q.toLowerCase());
+  } else {
+    el.verifyResult.innerHTML = `<p class="meta">Enter an ECP (ECP-XXXXXX) or 64-hex hash.</p>`;
+    return;
+  }
+
+  const { data, error } = await qry.single();
+  if (error) { el.verifyResult.innerHTML = `<p class="meta">Not found.</p>`; return; }
+
+  renderVerifyResult(data);
+};
+
+// ---------- recent ----------
+el.recentBtn.onclick = loadRecent;
+async function loadRecent(){
+  const { data, error } = await db
+    .from("echoprints")
+    .select("id, record_id, title, hash, created_at, timestamp, permalink, media_url, bitcoin_receipt_b64, bitcoin_anchored_at")
+    .order("created_at", { ascending:false })
+    .limit(20);
+
+  if (error) { el.recentList.innerHTML = `<div class="meta">Error: ${error.message}</div>`; return; }
+  el.recentList.innerHTML = data.map(renderCard).join("");
+  attachCardHandlers(data);
+}
+
+// ---------- rendering ----------
+function renderCard(row){
+  const ecp = row.record_id || "ECP—";
+  return `
+    <article class="cardRow">
+      <div class="ecp-pill">${ecp}</div>
+      <h3 class="title">${row.title || "Untitled"}</h3>
+      <div class="meta"><strong>Hash:</strong> ${row.hash || "—"}</div>
+      <div class="meta"><strong>Timestamp (UTC):</strong> ${safeTs(row)}</div>
+      <div class="meta"><strong>Bitcoin:</strong> ${btcStatus(row)}</div>
+      <div class="actions">
+        <button class="btn view-cert" data-id="${row.id}">View certificate</button>
+        <button class="btn btn-ghost dl-json" data-id="${row.id}">Download JSON</button>
+      </div>
+    </article>`;
+}
+
+function attachCardHandlers(rows){
+  const byId = Object.fromEntries(rows.map(r=>[r.id,r]));
+  [...document.querySelectorAll(".view-cert")].forEach(b=>b.onclick=()=>openCert(byId[b.dataset.id]));
+  [...document.querySelectorAll(".dl-json")].forEach(b=>b.onclick=()=>downloadJson(byId[b.dataset.id]));
+}
+
+function renderVerifyResult(row){
+  el.verifyResult.innerHTML = renderCard(row);
+  attachCardHandlers([row]);
 }
 
 function openCert(row){
-  const body = $('#cert-body');
-  body.innerHTML = `
-    <div class="card">
-      <div class="title" style="font-size:18px;margin-bottom:8px">${row.title || 'Untitled'} <span class="pill">${ecpOf(row)}</span></div>
-      <div class="meta"><strong>Hash:</strong> ${row.hash || '—'}</div>
-      <div class="meta"><strong>Timestamp (UTC):</strong> ${fmtTs(row)}</div>
-      <div class="meta"><strong>Bitcoin:</strong> ${btcStatus(row)}</div>
+  lastRowForModal = row;
+  const btc = btcStatus(row);
+  el.certBody.innerHTML = `
+    <div class="cardRow">
+      <div class="ecp-pill">${row.record_id || "ECP—"}</div>
+      <h3 class="title">${row.title || "Untitled"}</h3>
+      ${row.permalink ? `<div class="meta"><strong>Permalink:</strong> <a href="${row.permalink}" target="_blank" rel="noopener">${row.permalink}</a></div>` : ""}
+      ${row.media_url ? `<div class="meta"><strong>Media:</strong> <a href="${row.media_url}" target="_blank" rel="noopener">${row.media_url}</a></div>` : ""}
+      <div class="meta"><strong>Hash:</strong> ${row.hash}</div>
+      <div class="meta"><strong>Timestamp (UTC):</strong> ${safeTs(row)}</div>
+      <div class="meta"><strong>Bitcoin:</strong> ${btc}</div>
     </div>`;
-  $('#cert-open').onclick = ()=>{ $('#cert-modal').close(); verifyBy(ecpOf(row)); };
-  $('#cert-json').onclick = ()=> downloadJSON(buildCert(row), `${ecpOf(row)}.json`);
-  $('#cert-modal').showModal();
+  el.modal.showModal();
 }
-$('#cert-close').addEventListener('click', ()=>$('#cert-modal').close());
-
-function downloadJSON(obj, name){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+function downloadJson(row){
+  const blob = new Blob([JSON.stringify(row,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${row.record_id || "echoprint"}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-// ---------- Supabase ops ----------
-async function recent(){
-  // tolerant select: grab everything the policy allows, sort client-side
-  const { data, error } = await sb.from('echoprints').select('*').limit(50);
-  if (error){ $('#recent-list').innerHTML = `<div class="muted">${error.message}</div>`; return; }
-  const list = (data||[]).sort((a,b) => new Date(b.timestamp||b.created_at||0) - new Date(a.timestamp||a.created_at||0));
-  renderList(list, $('#recent-list'));
-}
-
-async function verifyBy(input){
-  const value = (input || $('#verify-input').value || '').trim();
-  if (!value) return;
-  let q;
-  if (/^ECP[-_]/i.test(value)){
-    q = sb.from('echoprints').select('*').or(`record_id.eq.${value},ecp_id.eq.${value}`).limit(1);
-  } else if (/^[a-f0-9]{64}$/i.test(value)){
-    q = sb.from('echoprints').select('*').eq('hash', value).limit(1);
-  } else {
-    $('#verify-result').innerHTML = `<div class="muted">Enter ECP-… or 64-hex hash.</div>`;
-    return;
-  }
-  const { data, error } = await q;
-  if (error){ $('#verify-result').innerHTML = `<div class="muted">${error.message}</div>`; return; }
-  if (!data || !data[0]){ $('#verify-result').innerHTML = `<div class="muted">No match.</div>`; return; }
-  renderList(data, $('#verify-result'));
-}
-
-$('#verify-btn').addEventListener('click', ()=>verifyBy());
-$('#recent-btn').addEventListener('click', recent);
-
-// ---------- Generate flow ----------
-async function sha256OfText(text){
-  const bytes = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
-async function sha256OfFile(file){
-  const buf = await file.arrayBuffer();
-  const h = await crypto.subtle.digest('SHA-256', buf);
-  return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
-function nextEcp(){
-  const d = new Date();
-  const pad = (n,w=2)=>String(n).padStart(w,'0');
-  return `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
-}
-
-byId('btn-hash-text').onclick = async ()=>{
-  const t = byId('gen-text').value.trim();
-  if (!t) return;
-  const h = await sha256OfText(t);
-  byId('gen-hash').value = h;
-  byId('btn-save').disabled = false;
-  byId('btn-anchor').disabled = false;
-};
-byId('btn-hash-file').onclick = async ()=>{
-  const f = byId('gen-file').files[0];
-  if (!f) return;
-  const h = await sha256OfFile(f);
-  byId('gen-hash').value = h;
-  byId('btn-save').disabled = false;
-  byId('btn-anchor').disabled = false;
-};
-
-byId('btn-save').onclick = async ()=>{
-  const title = byId('gen-title').value.trim() || 'Untitled';
-  const hash  = byId('gen-hash').value.trim();
-  if (!/^[a-f0-9]{64}$/i.test(hash)) return alert('Compute a SHA-256 first.');
-  const record_id = nextEcp();
-  const payload = {
-    title, hash, record_id,
-    permalink: byId('gen-link').value.trim() || null,
-    media_url: byId('gen-media').value.trim() || null
-  };
-  const { data, error } = await sb.from('echoprints').insert(payload).select('*').single();
-  if (error){ return alert(error.message); }
-  // echo into Verify
-  $('#verify-input').value = record_id;
-  verifyBy(record_id);
-  recent();
-};
-
-byId('btn-anchor').onclick = async ()=>{
-  const hash = byId('gen-hash').value.trim();
-  if (!/^[a-f0-9]{64}$/i.test(hash)) return alert('Compute a SHA-256 first.');
-  const res = await fetch(ANCHOR_ENDPOINT, {
-    method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({ hash })
-  });
-  const j = await res.json().catch(()=>({}));
-  if (!res.ok) return alert('Anchor error: ' + (j.error || res.status));
-  // Try to attach receipt to the newest row with this hash (best effort)
-  await sb.from('echoprints').update({ bitcoin_receipt_b64: j.receipt_b64 }).eq('hash', hash);
-  alert('Anchoring started (pending). You can run upgrade later.');
-  recent();
+// modal buttons
+el.closeModal.onclick = ()=>el.modal.close();
+el.openVerify.onclick = ()=>{
+  if (!lastRowForModal) return;
+  el.verifyIn.value = lastRowForModal.record_id || lastRowForModal.hash;
+  el.modal.close();
+  renderVerifyResult(lastRowForModal);
 };
 
 // initial load
-recent();
+loadRecent();
