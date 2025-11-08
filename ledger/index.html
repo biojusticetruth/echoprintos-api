@@ -1,153 +1,123 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EchoprintOS — Generate • Verify • Recent</title>
-<style>
-  :root{--bg:#0b0f12;--fg:#e8ecef;--card:#12171b;--line:#232a31;--acc:#29d9e7}
-  *{box-sizing:border-box}
-  body{font:16px/1.5 Inter,system-ui,Segoe UI,Arial;margin:0;background:var(--bg);color:var(--fg)}
-  a{color:var(--acc);text-decoration:none}
-  .wrap{max-width:980px;margin:36px auto;padding:0 18px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  h1{font-size:22px;margin:0}
-  .pane{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
-  input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1418;color:var(--fg)}
-  textarea{min-height:110px}
-  button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#161d23;color:#e8ecef;cursor:pointer}
-  button+button{margin-left:8px}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .cards{display:grid;grid-template-columns:1fr;gap:12px}
-  @media(min-width:680px){ .cards{grid-template-columns:1fr 1fr} }
-  .card{background:#0f1418;border:1px solid var(--line);border-radius:12px;padding:14px}
-  .card header{display:flex;justify-content:space-between;align-items:center}
-  .title{margin:0;font-size:16px}
-  .ecp{opacity:.8;font-size:13px}
-  .muted{opacity:.75;font-size:13px}
-  dl.meta{display:grid;grid-template-columns:120px 1fr;gap:6px;margin:10px 0}
-  details summary{cursor:pointer}
-
-  /* overlay */
-  #overlay{position:fixed;inset:0;background:rgba(5,8,12,.6);display:none;z-index:9999}
-  #panel{max-width:760px;margin:4vh auto;background:#fff;color:#111;border-radius:12px;padding:20px;overflow:auto;max-height:92vh}
-  #panel pre{white-space:pre-wrap}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EchoprintOS — Verify & Generate</title>
+  <link rel="stylesheet" href="/ledger/assets/css/base.css" />
+  <style>
+    body{font:16px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Inter,Arial}
+    main{max-width:860px;margin:24px auto;padding:0 16px}
+    h1{font-weight:700;margin:8px 0 20px}
+    .pane{border:1px solid #e5e7eb;border-radius:12px;padding:18px 16px;margin:18px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    input,textarea,button{font:inherit}
+    input,textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:10px 12px}
+    button{border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;background:#fff}
+    button.primary{background:#111;color:#fff;border-color:#111}
+    .cards{display:grid;grid-template-columns:1fr;gap:12px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+    .card header{display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .meta{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:8px 0 10px}
+    .meta dt{color:#6b7280}
+    nav.actions{display:flex;gap:8px;flex-wrap:wrap}
+    dialog{border:none;border-radius:12px;padding:0;max-width:720px;width:min(92vw,720px)}
+    .modal{padding:14px 16px}
+    .close{float:right}
+    small.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>EchoprintOS</h1>
-    <div class="muted">Generate • Verify • Recent</div>
-  </header>
+  <main>
+    <h1>🔎 EchoprintOS — Verify & Recent</h1>
 
-  <!-- GENERATE (browser hashing + auto Bitcoin stamp + insert) -->
-  <section class="pane">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Generate</h2>
-    <div class="row" style="margin-top:0">
-      <div style="flex:1 1 280px;min-width:260px">
-        <label class="muted">Title</label>
-        <input id="genTitle" type="text" placeholder="Untitled">
+    <!-- GENERATE -->
+    <section class="pane" id="generate">
+      <h2>Generate (hash + Bitcoin stamp)</h2>
+      <div class="row">
+        <input id="g-title" placeholder="Title (required)"/>
+        <input id="g-permalink" placeholder="Permalink (optional — where this lives)"/>
+        <input id="g-media" placeholder="Media URL (optional — image/video link)"/>
       </div>
-      <div style="flex:1 1 220px;min-width:200px">
-        <label class="muted">Permalink (optional)</label>
-        <input id="genPermalink" type="url" placeholder="https://…">
+
+      <h3>Hash from TEXT</h3>
+      <textarea id="g-text" rows="4" placeholder="Paste any content to hash…"></textarea>
+      <div class="row">
+        <button id="btnHashText">Hash Text → SHA-256</button>
       </div>
-      <div style="flex:1 1 220px;min-width:200px">
-        <label class="muted">Media URL (optional)</label>
-        <input id="genURL" type="url" placeholder="https://…/image.jpg">
+
+      <h3>Hash from FILE</h3>
+      <div class="row">
+        <input type="file" id="g-file" />
+        <button id="btnHashFile">Hash File → SHA-256</button>
       </div>
-    </div>
 
-    <div class="row">
-      <div style="flex:1 1 420px;min-width:320px">
-        <label class="muted">Hash from TEXT (browser SHA-256)</label>
-        <textarea id="genText" placeholder="Paste any content to hash…"></textarea>
-        <div class="row"><button id="btnHashText" type="button">Hash Text → SHA-256</button></div>
+      <h3>Use existing 64-hex hash</h3>
+      <div class="row">
+        <input id="g-hash" placeholder="ac5c01f3… (64 hex)"/>
       </div>
-      <div style="flex:1 1 260px;min-width:240px">
-        <label class="muted">Hash from FILE (exact bytes)</label>
-        <input id="genFile" type="file" accept="*/*">
-        <div class="row"><button id="btnHashFile" type="button">Hash File → SHA-256</button></div>
+
+      <div class="row">
+        <button id="btnInsert" class="primary">Insert (+ Bitcoin stamp)</button>
+        <button id="btnClear">Clear</button>
       </div>
-    </div>
 
-    <div class="row" style="margin-top:6px">
-      <div style="flex:1 1 420px;min-width:320px">
-        <label class="muted">Or paste an existing SHA-256 (64 hex)</label>
-        <input id="genHash" type="text" placeholder="6f1a…">
-      </div>
-      <div class="row" style="align-items:flex-end">
-        <button id="btnInsert" type="button" disabled>Insert (+ Bitcoin stamp)</button>
-        <button id="btnClearGen" type="button">Clear</button>
-      </div>
-    </div>
-    <div id="genMsg" class="muted" style="margin-top:8px"></div>
-  </section>
+      <p id="g-status"></p>
+    </section>
 
-  <!-- VERIFY (accepts ECP-XXXXXXXXXXXXXX or 64-hex hash) -->
-  <section class="pane">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Verify</h2>
-    <form id="verify-form" class="row" onsubmit="return false">
-      <input id="verify-input" placeholder="Enter EchoprintOS Record ID (ECP-…) or 64-hex hash">
-      <button id="verify-btn" type="submit">Verify</button>
-      <button id="recent-btn" type="button">Recent</button>
-      <button id="clear-btn"  type="button">Clear</button>
-    </form>
-    <div id="verify-result" style="margin-top:10px"></div>
-  </section>
+    <!-- VERIFY -->
+    <section id="verify" class="pane">
+      <h2>Verify</h2>
+      <form id="verify-form" class="row" onsubmit="return false;">
+        <input id="verify-input" inputmode="text" autocomplete="off"
+               placeholder="Enter EchoprintOS Record ID (ECP-…) or 64-hex hash" />
+        <button id="verify-btn" class="primary" type="submit">Verify</button>
+        <button id="recent-btn" type="button">Recent</button>
+        <button id="clear-btn" type="button">Clear</button>
+      </form>
+      <div id="verify-result"></div>
+    </section>
 
-  <!-- RECENT -->
-  <section class="pane">
-    <h2 style="margin:0 0 8px 0;font-size:18px">Recent</h2>
-    <div class="row" style="gap:8px;margin-bottom:6px">
-      <input id="search" type="text" placeholder="Search title…">
-      <button id="refresh" type="button">Refresh</button>
-    </div>
-    <div id="recent-list" class="cards"></div>
-    <div class="row" style="justify-content:center"><button id="more" type="button">Load more</button></div>
-  </section>
-</div>
+    <!-- RECENT -->
+    <section id="recent" class="pane">
+      <h2>Recent</h2>
+      <div id="recent-list" class="cards"></div>
+    </section>
+  </main>
 
-<!-- overlay -->
-<div id="overlay"><div id="panel"></div></div>
+  <!-- Card template -->
+  <template id="card-template">
+    <article class="card">
+      <header>
+        <h3 class="title"></h3>
+        <small class="ecp mono"></small>
+      </header>
 
-<!-- Card template -->
-<template id="card-template">
-  <article class="card">
-    <header>
-      <h3 class="title"></h3>
-      <small class="ecp"></small>
-    </header>
+      <dl class="meta">
+        <dt>Hash</dt><dd class="hash mono"></dd>
+        <dt>Timestamp</dt><dd class="ts mono"></dd>
+      </dl>
 
-    <div class="muted tsline"></div>
-    <dl class="meta">
-      <dt>Hash</dt><dd class="hash"></dd>
-      <dt>Record UUID</dt><dd class="uuid"></dd>
-      <dt>Link</dt><dd class="plink"></dd>
-    </dl>
+      <nav class="actions">
+        <button class="open-post"      hidden>Open post</button>
+        <button class="view-image"     hidden>View image</button>
+        <button class="open-in-verify">Open in Verify</button>
+        <button class="view-cert">View certificate</button>
+        <button class="download-json">Download JSON</button>
+        <button class="download-cert">Download certificate</button>
+      </nav>
+    </article>
+  </template>
 
-    <details class="exp">
-      <summary>View (expand details)</summary>
-      <div class="more"></div>
-    </details>
+  <!-- Certificate modal -->
+  <dialog id="cert-modal"><div class="modal">
+    <button class="close" onclick="this.closest('dialog').close()">✕</button>
+    <h3>Certificate</h3>
+    <pre id="cert-pre" style="white-space:pre-wrap"></pre>
+  </div></dialog>
 
-    <nav class="row" style="margin-top:8px">
-      <button class="open-post"   hidden>Open post</button>
-      <button class="view-image"  hidden>View image</button>
-      <button class="open-verify">Open in Verify</button>
-      <button class="view-cert">View certificate</button>
-      <button class="download-json">Download JSON</button>
-      <button class="download-cert">Download certificate</button>
-    </nav>
-  </article>
-</template>
-
-<!-- OpenTimestamps (Bitcoin) -->
-<script src="https://opentimestamps.org/assets/javascripts/vendor/opentimestamps.js"></script>
-
-<!-- Load env (Supabase URL + anon key), then the app -->
-<script src="/ledger/env.js?v=40"></script>
-<script type="module" src="/ledger/app.js?v=40"></script>
+  <!-- Load environment (Supabase URL + anon key), then app -->
+  <script src="/ledger/env.js?v=37"></script>
+  <script type="module" src="/ledger/app.js?v=37"></script>
 </body>
 </html>
