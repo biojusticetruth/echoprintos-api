@@ -1,127 +1,138 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>EchoprintOS — Generate • Verify • Recent</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EchoprintOS — Generate • Verify • Recent</title>
 
-  <!-- Inline dark theme + layout (no external CSS needed) -->
-  <style>
-    :root { color-scheme: light dark; }
-    *,*::before,*::after{box-sizing:border-box}
-    html,body{margin:0;background:#0b0c10;color:#e8eaed;font:16px/1.5 system-ui, -apple-system, Segoe UI, Inter, Arial}
-    a{color:#8ab4f8;text-decoration:none}
-    h1,h2,h3{margin:8px 0 10px}
-    .wrap{width:min(980px,100% - 24px);margin:24px auto}
-    /* panels */
-    section,.panel{padding:14px;margin:12px 0;border-radius:12px;border:1px solid #2a2f38;background:#0f1318}
-    /* inputs */
-    input,textarea,select{width:100%;max-width:100%;padding:10px 12px;background:#0e1116;color:#e8eaed;border:1px solid #2c313a;border-radius:10px}
-    input::placeholder,textarea::placeholder{color:#828b93}
-    /* buttons */
-    button{background:#1f6feb;color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
-    button:disabled{background:#2b2f36;color:#9aa0a6}
-    .muted{color:#9aa0a6;font-size:13px}
-    /* grids / cards */
-    #recent-list{display:grid;grid-template-columns:1fr;gap:14px}
-    @media (min-width:760px){#recent-list{grid-template-columns:1fr 1fr}}
-    article.card{position:relative;padding:14px;border-radius:14px;border:1px solid #28303a;background:#0f1318}
-    .title{margin:0 0 8px;font-weight:600;color:#e8eaed}
-    .ecp{position:absolute;top:10px;right:12px;background:#0d1117;color:#8ab4f8;border:1px solid #2b3038;padding:2px 10px;border-radius:999px;font-weight:600;letter-spacing:.3px}
-    .hash,.ts{font:12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;color:#c3c8cf;word-break:break-all;line-height:1.35;margin:2px 0 6px}
-    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .actions button{flex:1 1 calc(50% - 8px);padding:10px}
-    @media (min-width:760px){.actions button{flex:0 0 auto}}
-    /* simple rows */
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    .col2{display:grid;grid-template-columns:1fr;gap:10px}
-    @media (min-width:680px){.col2{grid-template-columns:1fr 1fr}}
-    /* dialog */
-    dialog#cert-modal{border:0;border-radius:12px;padding:0;max-width:min(760px,92vw)}
-    .dlg{background:#fff;color:#111;border-radius:12px;padding:16px}
-    .dlg h3{margin:0 0 6px}
-    .dlg pre{max-height:60vh;overflow:auto;background:#f5f6f7;border:1px solid #e3e5e8;border-radius:8px;padding:10px;color:#111}
-    @media (prefers-color-scheme:dark){
-      dialog#cert-modal{background:transparent}
-      .dlg{background:#0f1318;color:#e8eaed;border:1px solid #2a2f38}
-      .dlg pre{background:#0b0e12;color:#cbd1d8;border:1px solid #28303a}
-    }
-  </style>
+<style>
+/* ===== Dark theme + layout (inline so it always loads) ===== */
+:root { color-scheme: light dark; }
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
+main{width:min(980px,100% - 24px);margin:32px auto}
+h1{margin:0 0 10px 0;font-size:20px}
+h2{margin:8px 0 10px;font-size:18px}
+a{color:#8ab4f8;text-decoration:none}
+
+@media (prefers-color-scheme: dark){
+  html,body{background:#0b0c10;color:#e8eaed}
+  .panel,section,article{background:#0f1318;border:1px solid #2a2f38;border-radius:12px}
+  input,textarea,select{background:#0e1116;color:#e8eaed;border:1px solid #2c313a;border-radius:10px}
+  input::placeholder,textarea::placeholder{color:#828b93}
+  button{background:#1f6feb;color:#fff;border:0;border-radius:10px}
+  button:disabled{background:#2b2f36;color:#9aa0a6}
+  .open-in-verify,.view-cert,.download-json,.download-cert{background:#2b2f36}
+  .muted{color:#9aa0a6}
+}
+section.panel{padding:14px;margin-block:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,textarea,select{width:100%;max-width:100%;padding:10px 12px}
+button{padding:10px 12px;cursor:pointer}
+label small{opacity:.8}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:760px){ .grid{grid-template-columns:1fr 1fr} }
+
+/* Cards */
+.card{position:relative;padding:14px;border:1px solid #28303a;border-radius:14px;background:#0f1318}
+.card .title{margin:0 0 8px;font-weight:600}
+.ecp{
+  position:absolute;top:10px;right:12px;
+  background:#0d1117;color:#8ab4f8;border:1px solid #2b3038;
+  padding:2px 10px;border-radius:999px;font-weight:600;letter-spacing:.3px
+}
+.hash,.ts{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:#c3c8cf;
+  word-break:break-all;line-height:1.35;margin:2px 0 6px
+}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.actions button{flex:1 1 calc(50% - 8px)}
+@media(min-width:760px){ .actions button{flex:0 0 auto} }
+
+/* Certificate modal */
+dialog#cert-modal{border:0;border-radius:12px;padding:0;max-width:min(90vw,760px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+#cert-box{padding:16px;background:#fff;color:#111;border-radius:12px;max-height:85vh;overflow:auto}
+@media (prefers-color-scheme: dark){ #cert-box{background:#0f1318;color:#e8eaed;border:1px solid #2a2f38} }
+#cert-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+pre{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.45}
+</style>
 </head>
 <body>
-  <main class="wrap">
-    <header class="panel">
-      <h1 style="margin:0">EchoprintOS</h1>
-      <p class="muted" style="margin:6px 0 0">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
-    </header>
+<main>
+  <header class="panel" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px">
+    <h1>EchoprintOS</h1>
+    <nav class="row">
+      <a href="#generate">Generate</a>
+      <a href="#verify">Verify</a>
+      <a href="#recent">Recent</a>
+    </nav>
+  </header>
 
-    <!-- GENERATE -->
-    <section id="generate" class="panel">
-      <h2>Generate</h2>
-      <div class="col2">
-        <div>
-          <label class="muted">Title</label>
-          <input id="g-title" placeholder="Untitled">
-        </div>
-        <div>
-          <label class="muted">Permalink (optional)</label>
-          <input id="g-permalink" placeholder="https://…">
-        </div>
-        <div>
-          <label class="muted">Media URL (optional)</label>
-          <input id="g-media" placeholder="https://…/image.jpg">
+  <!-- ===== GENERATE ===== -->
+  <section id="generate" class="panel">
+    <h2>Generate</h2>
+    <div class="row">
+      <div style="flex:1 1 260px">
+        <label>Title</label>
+        <input id="g-title" placeholder="Untitled">
+      </div>
+      <div style="flex:1 1 260px">
+        <label>Permalink <small>(optional)</small></label>
+        <input id="g-permalink" type="url" placeholder="https://…">
+      </div>
+      <div style="flex:1 1 260px">
+        <label>Media URL <small>(optional)</small></label>
+        <input id="g-media" type="url" placeholder="https://…/image.jpg">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <div style="flex:1 1 360px">
+        <label>Hash from TEXT (SHA-256)</label>
+        <textarea id="g-text" placeholder="Paste any content to hash…"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button id="btnHashText">Hash Text → SHA-256</button>
         </div>
       </div>
-
-      <div class="panel" style="margin-top:12px">
-        <div class="col2">
-          <div>
-            <label class="muted">Hash from TEXT (SHA-256)</label>
-            <textarea id="g-text" placeholder="Paste any content to hash…"></textarea>
-            <div class="row" style="margin-top:8px"><button id="btnHashText">Hash Text → SHA-256</button></div>
-          </div>
-          <div>
-            <label class="muted">Hash from FILE (SHA-256)</label>
-            <input id="g-file" type="file" accept="*/*">
-            <div class="row" style="margin-top:8px"><button id="btnHashFile">Hash File → SHA-256</button></div>
-          </div>
-        </div>
-        <div style="margin-top:8px">
-          <label class="muted">Or paste an existing 64-hex hash</label>
-          <input id="g-hash" placeholder="6f1a…">
+      <div style="flex:1 1 260px">
+        <label>Hash from FILE (SHA-256)</label>
+        <input id="g-file" type="file" accept="*/*">
+        <div class="row" style="margin-top:6px">
+          <button id="btnHashFile">Hash File → SHA-256</button>
         </div>
       </div>
+    </div>
 
-      <div class="row">
-        <button id="btnInsert">Insert into EchoprintOS</button>
-        <button id="btnClear">Clear</button>
-      </div>
-      <div id="g-status" class="muted" style="margin-top:8px"></div>
-    </section>
+    <div style="margin-top:8px">
+      <label>Or paste an existing 64-hex hash</label>
+      <input id="g-hash" placeholder="6f1a…">
+    </div>
 
-    <!-- VERIFY -->
-    <section id="verify" class="panel">
-      <h2>Verify</h2>
-      <form id="verify-form" class="row">
-        <input id="verify-input" inputmode="text" autocomplete="off"
-               placeholder="Enter EchoprintOS Record ID (ECP-…) or 64-hex hash">
-        <button id="verify-btn" type="submit">Verify</button>
-        <button id="clear-btn" type="button">Clear</button>
-      </form>
-      <div id="verify-result" style="margin-top:12px"></div>
-    </section>
+    <div class="row" style="margin-top:10px">
+      <button id="btnInsert">Insert</button>
+      <button id="btnClear">Clear</button>
+    </div>
+    <div id="g-status" class="muted" style="margin-top:8px"></div>
+  </section>
 
-    <!-- RECENT -->
-    <section id="recent" class="panel">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h2 style="margin:0">Recent</h2>
-        <button id="recent-btn" type="button">Refresh</button>
-      </div>
-      <div id="recent-list" style="margin-top:12px"></div>
-    </section>
-  </main>
+  <!-- ===== VERIFY ===== -->
+  <section id="verify" class="panel">
+    <h2>Verify</h2>
+    <form id="verify-form" class="row">
+      <input id="verify-input" placeholder="Enter ECP-######## or 64-hex hash" autocomplete="off" inputmode="text" style="flex:1 1 420px">
+      <button id="verify-btn" type="submit">Verify</button>
+    </form>
+    <div id="verify-result" style="margin-top:12px"></div>
+  </section>
 
-  <!-- Card template used by app.js -->
+  <!-- ===== RECENT ===== -->
+  <section id="recent" class="panel">
+    <h2>Recent</h2>
+    <div id="recent-list" class="grid"></div>
+  </section>
+
+  <!-- card template -->
   <template id="card-template">
     <article class="card">
       <header>
@@ -133,8 +144,8 @@
         <dt class="muted">Timestamp</dt><dd class="ts"></dd>
       </dl>
       <nav class="actions">
-        <button class="open-post"      hidden>Open post</button>
-        <button class="view-image"     hidden>View image</button>
+        <button class="open-post" hidden>Open post</button>
+        <button class="view-image" hidden>View image</button>
         <button class="open-in-verify">Open in Verify</button>
         <button class="view-cert">View certificate</button>
         <button class="download-json">Download JSON</button>
@@ -143,19 +154,219 @@
     </article>
   </template>
 
-  <!-- Simple certificate dialog used by app.js -->
+  <!-- certificate modal -->
   <dialog id="cert-modal">
-    <div class="dlg">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <h3 style="margin:0">Echoprint Certificate</h3>
-        <button onclick="this.closest('dialog').close()">Close</button>
+    <div id="cert-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <strong>Echoprint Certificate</strong>
+        <button id="cert-close">Close</button>
       </div>
-      <pre id="cert-pre">{}</pre>
+      <pre id="cert-pre" style="margin-top:8px">…</pre>
+      <div id="cert-actions">
+        <button id="cert-download">Download certificate (.json)</button>
+      </div>
     </div>
   </dialog>
+</main>
 
-  <!-- Load environment (Supabase URL + anon key), then your app code -->
-  <script src="/ledger/env.js?v=37"></script>
-  <script type="module" src="/ledger/app.js?v=37"></script>
+<script type="module">
+/* ===== One-file app (no external CSS/JS needed) ===== */
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+
+/*** 1) CONFIG — paste your real values ***/
+const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';   // TODO: paste your real values
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';                          // TODO: paste your real value
+
+/*** 2) Supabase client ***/
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/*** 3) Helpers ***/
+const $  = (s, r=document)=>r.querySelector(s);
+const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+const isHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim());
+const isECP   = s => /^ECP[-\s]?[A-Z0-9]{8,}$/i.test((s||'').trim());
+const tsNice  = t => t ? new Date(t).toISOString().replace('T',' ').replace('Z',' UTC') : '—';
+
+/* Make a stable ECP code:
+   - if row.ecp_id exists → use it
+   - else use record_id or id (uuid) → take first 8 hex → ECP-######## */
+function ecpOf(row){
+  if (row?.ecp_id && /^ECP[-A-Z0-9]{4,}$/.test(row.ecp_id)) return row.ecp_id;
+  const src = (row?.record_id || row?.id || '').toString().replace(/[^a-f0-9]/ig,'');
+  const cut = src.slice(0,8).toUpperCase();
+  return cut ? `ECP-${cut}` : 'ECP——';
+}
+
+function slim(row){
+  return {
+    standard: 'EchoprintOS v1',
+    ecp_id: ecpOf(row),
+    record_id: row.record_id || row.id || null,
+    title: row.title || null,
+    hash: row.hash || null,
+    timestamps: {
+      db_created_at: row.created_at || null,
+      sent_at: row.sent_at || null,
+      bitcoin: { anchored: false, status: isHex64(row.hash) ? 'pending' : 'no-hash' }  // placeholder
+    },
+    links: {
+      permalink: row.permalink || null,
+      media: row.url || null
+    }
+  };
+}
+
+function download(name, text){
+  const blob = new Blob([text], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/*** 4) Render a card ***/
+function renderCard(row){
+  const tpl = $('#card-template').content.cloneNode(true);
+  const title = row.title || (row.permalink ? new URL(row.permalink).hostname : '(untitled)');
+  $('.title', tpl).textContent = title;
+  $('.ecp',   tpl).textContent = ecpOf(row);
+  $('.hash',  tpl).textContent = isHex64(row.hash) ? row.hash : '—';
+  const ts = row.sent_at || row.created_at || '';
+  $('.ts', tpl).textContent = tsNice(ts);
+
+  const bOpen  = $('.open-post', tpl);
+  const bImg   = $('.view-image', tpl);
+  const bVer   = $('.open-in-verify', tpl);
+  const bCert  = $('.view-cert', tpl);
+  const bJ     = $('.download-json', tpl);
+  const bC     = $('.download-cert', tpl);
+
+  if (row.permalink) { bOpen.hidden=false; bOpen.onclick=()=>window.open(row.permalink,'_blank'); }
+  else if (row.url)  { bOpen.hidden=false; bOpen.textContent='Open link'; bOpen.onclick=()=>window.open(row.url,'_blank'); }
+
+  if (row.url && /\.(png|jpe?g|gif|webp|mp4|mov|m4v)$/i.test(row.url)) {
+    bImg.hidden=false; bImg.onclick=()=>window.open(row.url,'_blank');
+  }
+
+  bVer.onclick = ()=>{
+    $('#verify-input').value = isHex64(row.hash||'') ? row.hash : ecpOf(row);
+    $('#verify-form').dispatchEvent(new Event('submit', {cancelable:true,bubbles:true}));
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  bJ.onclick = ()=> download(`${ecpOf(row)}.json`, JSON.stringify(slim(row),null,2));
+
+  bCert.onclick = ()=>{
+    const cert = slim(row);
+    $('#cert-pre').textContent = JSON.stringify(cert,null,2);
+    $('#cert-modal').showModal();
+  };
+  bC.onclick = ()=>{
+    const cert = slim(row);
+    download(`${ecpOf(row)}-certificate.json`, JSON.stringify(cert,null,2));
+  };
+
+  return tpl;
+}
+
+/*** 5) Load RECENT ***/
+async function loadRecent(){
+  const list = $('#recent-list'); list.innerHTML = '';
+  const { data, error } = await supabase
+    .from('echoprints')
+    .select('id,record_id,ecp_id,title,hash,created_at,sent_at,url,permalink,platform')
+    .order('created_at', { ascending:false })
+    .limit(50);
+  if (error){ list.textContent = error.message; return; }
+  (data||[]).forEach(row => list.append(renderCard(row)));
+}
+
+/*** 6) VERIFY (ECP or hash) ***/
+async function doVerify(q){
+  const out = $('#verify-result'); out.innerHTML='';
+  if (!q){ out.textContent='Enter ECP-######## or 64-hex hash'; return; }
+
+  // hash path
+  if (isHex64(q)){
+    const { data, error } = await supabase.from('echoprints').select('*').eq('hash', q).limit(1);
+    if (error){ out.textContent=error.message; return; }
+    if (!data?.length){ out.textContent='No match'; return; }
+    out.append(renderCard(data[0])); return;
+  }
+
+  // ECP path: first try real ecp_id column
+  if (isECP(q)){
+    const qUp = q.toUpperCase().replace(/\s+/g,'');
+    let { data, error } = await supabase.from('echoprints').select('*').eq('ecp_id', qUp).limit(1);
+    if (error){ out.textContent=error.message; return; }
+    if (data?.length){ out.append(renderCard(data[0])); return; }
+
+    // fallback: scan a window of recents and match derived ECP
+    const res = await supabase.from('echoprints').select('*').order('created_at',{ascending:false}).limit(200);
+    if (res.error){ out.textContent=res.error.message; return; }
+    const hit = (res.data||[]).find(r => ecpOf(r).toUpperCase() === qUp);
+    if (hit){ out.append(renderCard(hit)); return; }
+
+    out.textContent='No match'; return;
+  }
+
+  out.textContent='Not a valid ECP or 64-hex hash';
+}
+
+/*** 7) GENERATE: hashing + insert ***/
+async function sha256Text(s){
+  const enc = new TextEncoder().encode(s||'');
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function sha256File(file){
+  const buf = await file.arrayBuffer();
+  const dig = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+$('#btnHashText').onclick = async ()=>{
+  const t = $('#g-text').value || '';
+  $('#g-hash').value = t ? await sha256Text(t) : '';
+};
+$('#btnHashFile').onclick = async ()=>{
+  const f = $('#g-file').files?.[0]; if(!f) return;
+  $('#g-hash').value = await sha256File(f);
+};
+$('#btnClear').onclick = ()=>{
+  ['g-title','g-permalink','g-media','g-text','g-hash'].forEach(id=>$('#'+id).value='');
+  $('#g-status').textContent='';
+};
+$('#btnInsert').onclick = async ()=>{
+  const title = ($('#g-title').value||'Untitled').trim();
+  const permalink = ($('#g-permalink').value||'').trim() || null;
+  const url = ($('#g-media').value||'').trim() || null;
+  const hash = ($('#g-hash').value||'').trim();
+
+  if (!isHex64(hash)){ $('#g-status').textContent='Need a valid 64-hex hash.'; return; }
+  $('#g-status').textContent='Inserting…';
+  const insert = { title, hash, permalink, url, sent_at: new Date().toISOString() };
+  const { error } = await supabase.from('echoprints').insert(insert);
+  if (error){ $('#g-status').textContent=error.message; return; }
+  $('#g-status').textContent='Inserted ✓';
+  await loadRecent();
+};
+
+/*** 8) Wire UI ***/
+$('#verify-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  doVerify($('#verify-input').value.trim());
+});
+$('#cert-close').onclick = ()=> $('#cert-modal').close();
+$('#cert-download').onclick = ()=>{
+  try{
+    const obj = JSON.parse($('#cert-pre').textContent || '{}');
+    download(`${obj.ecp_id||'echoprint'}-certificate.json`, JSON.stringify(obj,null,2));
+  }catch{}
+};
+
+/*** 9) Boot ***/
+loadRecent();
+if (!location.hash) location.hash = '#verify';
+</script>
 </body>
 </html>
