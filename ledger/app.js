@@ -69,7 +69,31 @@ async function buildCertificate(row){
     }
   };
 }
+async function anchorToBitcoin(hash, meta = {}) {
+  if (!/^[a-f0-9]{64}$/i.test(hash)) throw new Error('64-hex hash required');
+  const r = await fetch(window.__ENV.ANCHOR_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hash, ...meta })
+  });
+  return r.json(); // { ok:true, bitcoin:{ anchored:false, status:'pending' } }
+}
+document.querySelector('#insert-bitcoin')?.addEventListener('click', async () => {
+  const hash = document.querySelector('#existing-hash').value.trim();
+  const row  = await createRecordFromHash(hash);     // your existing insert flow
+  await afterCreateRecord(row);
+});
 
+// Example: call right after you create a record
+async function afterCreateRecord(row) {
+  try {
+    const anchor = await anchorToBitcoin(row.hash, { record_id: row.record_id, title: row.title });
+    row.bitcoin = anchor.bitcoin;                     // keep in memory
+    renderCertificate(row);                           // your existing render – now shows “pending”
+  } catch (e) {
+    console.warn('Anchor submit failed:', e);
+  }
+}
 // Small helper to download a JSON blob
 function download(name, text){
   const blob = new Blob([text], {type:'application/json'});
@@ -101,7 +125,17 @@ function renderCard(row){
   const title = row.title || (row.permalink ? new URL(row.permalink).hostname : '(untitled)');
   $('.title', tpl).textContent = title;
   $('.ecp',   tpl).textContent = ecpOf(row);
+function newEcpId() {
+  const ts = new Date().toISOString().replace(/[-:.TZ]/g,''); // YYYYMMDDHHMMSSmmm
+  const rand = crypto.getRandomValues(new Uint32Array(1))[0].toString(16).slice(0,6).toUpperCase();
+  return `ECP-${ts}-${rand}`;
+}
 
+// when creating a row:
+const row = {
+  record_id: newEcpId(),
+  title, hash, permalink, media_url
+};
   // Hash + Timestamp
   $('.hash', tpl).textContent = isHex64(row.hash) ? row.hash : '—';
   $('.ts',   tpl).textContent = prettyTS(row);
