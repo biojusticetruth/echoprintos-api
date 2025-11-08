@@ -1,244 +1,177 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// /ledger/app.js
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const env = window.env || {};
-if(!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY){ alert('Missing Supabase ENV'); }
-const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+const ENV = window.__ECP__ || {};
+if (!ENV.SUPABASE_URL || !ENV.SUPABASE_ANON_KEY) {
+  alert('Missing Supabase ENV');
+}
+const db = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY);
 
-const $ = s => document.querySelector(s);
-const els = {
-  // generate
-  title: $('#g-title'), link: $('#g-link'), media: $('#g-media'),
-  text: $('#g-text'), file: $('#g-file'), gen: $('#btnGenerate'),
-  anchor: $('#btnAnchor'), outHash: $('#g-hash'),
-  // verify
-  vInput: $('#verify-input'), vBtn: $('#verify-btn'),
-  vOut: $('#verify-result'),
-  // lists & modal
-  list: $('#recent-list'),
-  dlg: $('#cert-modal'), cert: $('#cert-body'),
-  certClose: $('#cert-close'), certOpenV: $('#cert-open-verify'),
-  certJson: $('#cert-json'), certPrint: $('#cert-print'),
+// ---------- DOM ----------
+const $title = document.querySelector('#title');
+const $permalink = document.querySelector('#permalink');
+const $media = document.querySelector('#media_url');
+const $text = document.querySelector('#text');
+const $file = document.querySelector('#file');
+const $hash = document.querySelector('#hash');
+const $genBtn = document.querySelector('#generate');
+
+const $verifyInput = document.querySelector('#verify-input');
+const $verifyBtn = document.querySelector('#verify-btn');
+const $recentBtn = document.querySelector('#recent-btn');
+const $verifyResult = document.querySelector('#verify-result');
+const $recentList = document.querySelector('#recent-list');
+
+const $certModal = document.querySelector('#cert-modal');
+const $certBody = document.querySelector('#cert-body');
+const $certClose = document.querySelector('#cert-close');
+const $certDismiss = document.querySelector('#cert-dismiss');
+const $certOpenVerify = document.querySelector('#open-verify');
+const $certDl = document.querySelector('#dl-json');
+
+// ---------- helpers ----------
+const fmtUTC = (d) =>
+  new Date(d).toISOString().replace('T',' ').replace('Z',' UTC');
+
+const makeEcp = (date = new Date()) => {
+  // ECP-YYYYMMDDHHMMSSms (short)
+  const s = date.toISOString().replace(/[-:TZ.]/g,'');
+  return `ECP-${s.slice(0,14)}${s.slice(14,16)}`;
 };
 
-const iso = (d)=> new Date(d).toISOString().replace('T',' ').replace('Z',' UTC');
-const isHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim());
-const isECP   = s => /^ECP[-A-Z0-9]{8,}$/i.test((s||'').trim());
-
-// Make a long, legible ECP like before (12 hex)
-const makeEcp = () => {
-  const rand = crypto.getRandomValues(new Uint8Array(8)); // 8 bytes -> 16 hex
-  const hex  = [...rand].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,12).toUpperCase();
-  return `ECP-${hex}`;
-};
-
-async function sha256HexFromText(s){
-  const enc = new TextEncoder().encode(s);
+async function sha256HexFromText(str) {
+  const enc = new TextEncoder().encode(str);
   const buf = await crypto.subtle.digest('SHA-256', enc);
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function sha256HexFromFile(file){
+async function sha256HexFromFile(file) {
   const buf = await file.arrayBuffer();
-  const dig = await crypto.subtle.digest('SHA-256', buf);
-  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-/* -------------------- GENERATE (single button) -------------------- */
-let lastRow = null;
+function cardHTML(row) {
+  const ecp = row.record_id || '—';
+  const ts  = row.timestamp || row.created_at || row.inserted_at || new Date().toISOString();
+  return `
+  <article class="card">
+    <span class="ecp chip">${ecp}</span>
+    <h3 class="title">${row.title || 'Untitled'}</h3>
+    <div class="meta mono"><strong>Hash:</strong> ${row.hash}</div>
+    <div class="meta mono"><strong>Timestamp (UTC):</strong> ${fmtUTC(ts)}</div>
+    <div class="meta mono"><strong>Bitcoin:</strong> ${row.bitcoin_anchored_at ? 'anchored' : '—'}</div>
+    <div class="actions">
+      <button class="btn view-cert" data-id="${row.id}">View certificate</button>
+      <button class="btn btn-ghost dl-json" data-id="${row.id}">Download JSON</button>
+    </div>
+  </article>`;
+}
 
-els.gen.onclick = async ()=>{
-  try{
-    // 1) compute hash
-    let hash='';
-    if(els.file.files?.[0])       hash = await sha256HexFromFile(els.file.files[0]);
-    else if(els.text.value.trim()) hash = await sha256HexFromText(els.text.value);
-    else { alert('Provide text or a file.'); return; }
-    els.outHash.value = hash;
+function renderRows(target, rows) {
+  target.innerHTML = rows.map(cardHTML).join('') || `<div class="muted">No results.</div>`;
+  // wire buttons
+  target.querySelectorAll('.view-cert').forEach(b=>{
+    b.addEventListener('click', async () => showCertificateById(b.dataset.id));
+  });
+  target.querySelectorAll('.dl-json').forEach(b=>{
+    b.addEventListener('click', async () => downloadJsonById(b.dataset.id));
+  });
+}
 
-    // 2) insert (auto-save)
+async function showCertificateById(id) {
+  const { data } = await db.from('echoprints').select('*').eq('id', id).single();
+  showCertificate(data);
+}
+function showCertificate(row) {
+  const ts  = row.timestamp || row.created_at || new Date().toISOString();
+  $certBody.innerHTML = `
+    <div class="card">
+      <span class="ecp chip">${row.record_id || '—'}</span>
+      <h3 class="title">${row.title || 'Untitled'}</h3>
+      <div class="meta mono"><strong>Hash:</strong> ${row.hash}</div>
+      <div class="meta mono"><strong>Timestamp (UTC):</strong> ${fmtUTC(ts)}</div>
+      <div class="meta mono"><strong>Bitcoin:</strong> ${row.bitcoin_anchored_at ? 'anchored' : '—'}</div>
+    </div>`;
+  $certOpenVerify.onclick = () => {
+    $verifyInput.value = row.record_id || row.hash;
+    $certModal.close();
+    verify();
+  };
+  $certDl.onclick = () => downloadJson(row);
+  $certModal.showModal();
+}
+function downloadJson(row) {
+  const blob = new Blob([JSON.stringify(row, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href:url, download:`${row.record_id||'certificate'}.json` });
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+async function downloadJsonById(id) {
+  const { data } = await db.from('echoprints').select('*').eq('id', id).single();
+  downloadJson(data);
+}
+
+// ---------- actions ----------
+$genBtn.addEventListener('click', async () => {
+  try {
+    // 1) get hash (file wins; else text)
+    let hex = '';
+    if ($file.files[0]) {
+      hex = await sha256HexFromFile($file.files[0]);
+    } else if ($text.value.trim()) {
+      hex = await sha256HexFromText($text.value.trim());
+    } else {
+      alert('Add text or choose a file to hash.');
+      return;
+    }
+    $hash.value = hex;
+
+    // 2) save to ledger
     const row = {
       record_id: makeEcp(),
-      title: (els.title.value || 'Untitled').trim(),
-      hash,
-      permalink: els.link.value || null,
-      media_url: els.media.value || null,
+      title: ($title.value || 'Untitled').trim(),
+      permalink: ($permalink.value || null) || null,
+      media_url: ($media.value || null) || null,
+      hash: hex,
       timestamp: new Date().toISOString()
     };
+    const { data, error } = await db.from('echoprints').insert(row).select('*').single();
+    if (error) throw error;
 
-    const { data, error } = await supabase
-      .from('echoprints')
-      .insert(row)
-      .select('id,record_id,title,hash,permalink,media_url,timestamp,created_at,bitcoin_receipt_b64,bitcoin_anchored_at')
-      .single();
-
-    if(error) throw error;
-    lastRow = data;
-
-    // 3) show cert + prepend to Recent
-    renderCertificate(data);
-    prependCard(data);
-    els.anchor.disabled = false;
-  }catch(e){
-    console.error(e); alert('Generate failed: ' + (e.message||e));
+    // 3) show certificate + prepend to recent
+    showCertificate(data);
+    recent(true);
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
   }
-};
+});
 
-/* --------- OPTIONAL: Anchor to Bitcoin via /api/anchor (if you deploy it) --------- */
-els.anchor.onclick = async ()=>{
-  if(!lastRow || !isHex64(lastRow.hash)){ return; }
-  els.anchor.disabled = true; els.anchor.textContent = 'Anchoring…';
-  try{
-    const res = await fetch('/api/anchor', {
-      method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ hash: lastRow.hash })
-    });
-    const payload = await res.json();
-    if(!res.ok) throw new Error(payload.error||'OTS error');
-
-    await supabase.from('echoprints')
-      .update({ bitcoin_receipt_b64: payload.receipt_b64 })
-      .eq('id', lastRow.id);
-
-    els.anchor.textContent = 'Anchored (pending upgrade)';
-  }catch(e){
-    console.error(e);
-    alert('Anchor failed: ' + (e.message||e));
-    els.anchor.textContent = 'Anchor to Bitcoin';
-    els.anchor.disabled = false;
-  }
-};
-
-/* -------------------- VERIFY -------------------- */
-els.vBtn.onclick = async ()=>{
-  const q = (els.vInput.value||'').trim();
-  els.vOut.innerHTML = '';
-  if(!q) return;
-
-  let sel = supabase.from('echoprints')
-    .select('id,record_id,title,hash,permalink,media_url,timestamp,created_at,bitcoin_receipt_b64,bitcoin_anchored_at')
-    .limit(1);
-
-  if(isHex64(q)) sel = sel.eq('hash', q);
-  else if(isECP(q)) sel = sel.eq('record_id', q.toUpperCase());
-  else { els.vOut.textContent = 'Enter ECP-… or 64-hex hash.'; return; }
-
-  const { data, error } = await sel;
-  if(error){ els.vOut.textContent = error.message; return; }
-  if(!data || !data.length){ els.vOut.textContent = 'No match.'; return; }
-  els.vOut.prepend(cardEl(data[0]));
-};
-
-/* -------------------- RECENT + REALTIME -------------------- */
-async function loadRecent(){
-  const { data, error } = await supabase.from('echoprints')
-    .select('id,record_id,title,hash,permalink,media_url,timestamp,created_at,bitcoin_receipt_b64,bitcoin_anchored_at')
-    .order('timestamp',{ascending:false}).limit(30);
-  if(error){ console.error(error); return; }
-  els.list.innerHTML = '';
-  (data||[]).forEach(r => els.list.append(cardEl(r)));
+async function verify() {
+  const q = ($verifyInput.value || '').trim();
+  if (!q) return;
+  let query = db.from('echoprints').select('*').limit(20);
+  if (/^ECP-/i.test(q)) query = query.eq('record_id', q);
+  else if (/^[a-f0-9]{64}$/i.test(q)) query = query.eq('hash', q.toLowerCase());
+  else { alert('Enter an ECP like ECP-XXXX or a 64-hex hash'); return; }
+  const { data, error } = await query;
+  if (error) { alert(error.message); return; }
+  renderRows($verifyResult, data || []);
 }
-loadRecent();
+$verifyBtn.addEventListener('click', verify);
 
-supabase.channel('public:echoprints')
-  .on('postgres_changes', { event:'INSERT', schema:'public', table:'echoprints' },
-    payload => prependCard(payload.new))
-  .subscribe();
-
-function prependCard(r){ els.list.prepend(cardEl(r)); }
-
-/* -------------------- RENDERING -------------------- */
-function cardEl(row){
-  const ecp = row.record_id || '—';
-  const dt  = row.timestamp || row.created_at || null;
-  const btc = row.bitcoin_anchored_at ? 'anchored'
-           : row.bitcoin_receipt_b64 ? 'pending'
-           : '—';
-
-  const el = document.createElement('article');
-  el.className = 'card';
-  el.innerHTML = `
-    <div class="head">
-      <h3 class="title">${row.title || 'Untitled'}</h3>
-      <span class="ecp">${ecp}</span>
-    </div>
-    <div class="meta"><strong>Hash:</strong> ${row.hash || '—'}</div>
-    <div class="meta"><strong>Timestamp (UTC):</strong> ${dt ? iso(dt) : '—'}</div>
-    <div class="meta"><strong>Bitcoin:</strong> ${btc}</div>
-    <div class="actions">
-      ${row.permalink?'<button class="btn ghost open-post">Open post</button>':''}
-      ${row.media_url?'<button class="btn ghost view-image">View image</button>':''}
-      <button class="btn open-verify">Open in Verify</button>
-      <button class="btn ghost view-cert">View certificate</button>
-      <button class="btn ghost dl-json">Download JSON</button>
-    </div>`;
-
-  if(row.permalink) el.querySelector('.open-post').onclick = () => window.open(row.permalink,'_blank');
-  if(row.media_url) el.querySelector('.view-image').onclick = () => window.open(row.media_url,'_blank');
-
-  el.querySelector('.open-verify').onclick = ()=>{
-    els.vInput.value = row.record_id || row.hash || '';
-    els.vBtn.click();
-    window.scrollTo({top:0,behavior:'smooth'});
-  };
-
-  el.querySelector('.view-cert').onclick = ()=> renderCertificate(row);
-  el.querySelector('.dl-json').onclick   = ()=> downloadJSON(row, (row.record_id||'echoprint')+'.json');
-  return el;
+async function recent(prepend=false) {
+  const { data, error } = await db
+    .from('echoprints')
+    .select('id,record_id,title,hash,timestamp,created_at,bitcoin_anchored_at')
+    .order('created_at', { ascending:false, nullsFirst:false })
+    .limit(20);
+  if (error) { $recentList.innerHTML = `<div class="muted">${error.message}</div>`; return; }
+  renderRows($recentList, data || []);
 }
+$recentBtn.addEventListener('click', ()=>recent(false));
 
-function renderCertificate(row){
-  const ecp = row.record_id || '—';
-  const dt  = row.timestamp || row.created_at || null;
-  const btc = row.bitcoin_anchored_at ? 'anchored'
-           : row.bitcoin_receipt_b64 ? 'pending'
-           : '—';
-
-  els.cert.innerHTML = `
-    <article class="card">
-      <div class="head">
-        <h3 class="title">${row.title || 'Untitled'}</h3>
-        <span class="ecp">${ecp}</span>
-      </div>
-      <div class="meta"><strong>Hash:</strong> ${row.hash || '—'}</div>
-      <div class="meta"><strong>Timestamp (UTC):</strong> ${dt ? iso(dt) : '—'}</div>
-      <div class="meta"><strong>Permalink:</strong> ${row.permalink || '—'}</div>
-      <div class="meta"><strong>Media URL:</strong> ${row.media_url || '—'}</div>
-      <div class="meta"><strong>Bitcoin:</strong> ${btc}</div>
-    </article>`;
-  els.dlg.showModal();
-
-  els.certOpenV.onclick = ()=>{
-    els.vInput.value = row.record_id || row.hash || '';
-    els.dlg.close(); els.vBtn.click();
-  };
-  els.certJson.onclick  = ()=> downloadJSON(certificatePayload(row), (ecp||'echoprint')+'-certificate.json');
-  els.certPrint.onclick = ()=> window.print();
-}
-$('#cert-close')?.addEventListener('click', ()=>els.dlg.close());
-
-function certificatePayload(r){
-  return {
-    standard: 'EchoprintOS v1',
-    ecp_id: r.record_id || null,
-    title: r.title || null,
-    hash: r.hash || null,
-    timestamps: {
-      db_created_at: r.created_at || null,
-      sent_at: r.timestamp || null,
-      bitcoin: r.bitcoin_anchored_at ? { anchored:true, anchored_at:r.bitcoin_anchored_at }
-              : r.bitcoin_receipt_b64 ? { anchored:false, status:'pending' }
-              : { anchored:false, status:'no-receipt' }
-    },
-    links: {
-      permalink: r.permalink || null,
-      media: r.media_url || null,
-      verify_ui: location.href
-    }
-  };
-}
-
-function downloadJSON(obj, name){
-  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name; a.click();
-  URL.revokeObjectURL(a.href);
-}
+// init
+recent(false);
+setInterval(()=>recent(false), 15000);
+$certClose?.addEventListener('click', ()=> $certModal.close());
+$certDismiss?.addEventListener('click', ()=> $certModal.close());
