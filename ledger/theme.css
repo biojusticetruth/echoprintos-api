@@ -1,174 +1,98 @@
-</style>
-/* ===================== EchoprintOS — full theme block ===================== */
-/* works standalone; includes base, layout, cards, buttons, dialog, dark mode */
-
-:root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #0f1720;
-  --muted: #556170;
-  --panel: #ffffff;
-  --panel-border: #e6eaf0;
-  --card: #ffffff;
-  --card-border: #e6eaf0;
-  --input-bg: #ffffff;
-  --input-border: #cfd7e3;
-  --btn: #198754;          /* BioJustice green-ish */
-  --btn-fg: #ffffff;
-  --btn-muted: #eef2f6;
-  --btn-muted-fg: #233044;
-  --link: #1f6feb;
-  --pill-bg: #eef3ff;
-  --pill-fg: #2851a3;
-  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.07);
+/* ============ EchoprintOS theme (dark-first, sleek) ============ */
+:root{
+  --bg:#0b0c10; --panel:#0f1318; --border:#28303a;
+  --text:#e8eaed; --muted:#9aa0a6; --link:#8ab4f8;
+  --brand:#1f6feb; --success:#1CC467; --danger:#ef4444;
+  --radius:12px; --gap:12px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
 }
 
-/* ------------------------------ Dark palette ------------------------------ */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0c10;
-    --fg: #e8eaed;
-    --muted: #9aa0a6;
-    --panel: #0f1318;
-    --panel-border: #2a2f38;
-    --card: #0f1318;
-    --card-border: #28303a;
-    --input-bg: #0e1116;
-    --input-border: #2c313a;
-    --btn: #1f6feb;
-    --btn-fg: #ffffff;
-    --btn-muted: #2b2f36;
-    --btn-muted-fg: #c7cbd1;
-    --link: #8ab4f8;
-    --pill-bg: #0d1117;
-    --pill-fg: #8ab4f8;
-    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.35);
-  }
+html, body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  margin:0; padding:0;
+}
+a{ color:var(--link); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+.muted{ color:var(--muted); }
+
+/* layout centering on all pages */
+body, main, .wrap, .container{ width:min(980px, 100% - 24px); margin-inline:auto; }
+
+/* headings */
+h1,h2,h3{ color:var(--text); margin:0 0 8px; }
+h1{ font-size:clamp(28px, 4vw, 40px); }
+h2{ font-size:clamp(20px, 3vw, 26px); }
+
+/* panels */
+section, .panel{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px; margin:12px 0;
 }
 
-/* ------------------------------- Base / reset ----------------------------- */
-*, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
-body {
-  font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
+/* inputs */
+.input, input, textarea, select{
+  width:100%; max-width:100%; padding:10px 12px;
+  background:#0e1116; color:var(--text);
+  border:1px solid #2c313a; border-radius:10px;
 }
-a { color: var(--link); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.muted { color: var(--muted); }
+input::placeholder, textarea::placeholder{ color:#828b93; }
 
-/* keep content centered on mobile & desktop */
-main, .wrap, .container, body > .container-root {
-  width: min(980px, 100% - 24px);
-  margin-inline: auto;
+/* buttons (one size everywhere) */
+.btn{
+  height:40px; padding:0 14px; border:0; border-radius:10px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--brand); color:#fff; cursor:pointer; font-weight:600;
 }
+.btn:disabled{ background:#2b2f36; color:var(--muted); cursor:not-allowed; }
+.btn-ghost{ background:#2b2f36; color:#fff; }
+.btn-success{ background:var(--success); color:#fff; }
+.btn-danger{ background:var(--danger); color:#fff; }
+.btn.wide{ width:100%; }
 
-/* ----------------------------- Panels & headings -------------------------- */
-section, .panel {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 14px;
-  margin-block: 12px;
-  box-shadow: var(--shadow);
+/* result cards */
+.card{
+  position:relative; background:var(--panel);
+  border:1px solid var(--border); border-radius:14px; padding:14px;
 }
-h1, h2, h3 { margin: 8px 0 10px; font-weight: 700; }
-h1 { font-size: 38px; line-height: 1.15; }
-h2 { font-size: 22px; }
-h3 { font-size: 18px; }
-
-/* ----------------------------- Inputs & controls -------------------------- */
-input, textarea, select {
-  width: 100%; max-width: 100%;
-  background: var(--input-bg);
-  color: var(--fg);
-  border: 1px solid var(--input-border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  outline: none;
-}
-input::placeholder, textarea::placeholder { color: color-mix(in oklab, var(--muted) 80%, var(--fg)); }
-
-/* ------------------------------- Buttons ---------------------------------- */
-button, .btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px; padding: 10px 14px; border-radius: 10px;
-  border: 0; background: var(--btn); color: var(--btn-fg);
-  font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
-}
-button:disabled, .btn:disabled { background: var(--btn-muted); color: var(--muted); cursor: not-allowed; }
-button.btn-muted, .btn-muted { background: var(--btn-muted); color: var(--btn-muted-fg); }
-
-/* map existing class names to muted style (small action chips) */
-.open-in-verify, .view-cert, .download-json, .download-cert { background: var(--btn-muted); color: var(--btn-muted-fg); }
-
-/* button bar on cards; wraps nicely on small screens */
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.actions button { flex: 1 1 calc(50% - 8px); }
-@media (min-width: 760px) {
-  .actions button { flex: 0 0 auto; }
-}
-
-/* --------------------------- Recent list grid ----------------------------- */
-#recent-list { display: grid; grid-template-columns: 1fr; gap: 14px; }
-@media (min-width: 760px) { #recent-list { grid-template-columns: 1fr 1fr; } }
-
-/* --------------------------------- Cards ---------------------------------- */
-#recent-list article, #verify-result article, .card {
-  position: relative;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: var(--shadow);
-}
-.card .title, #recent-list article .title { margin: 0 0 8px; font-weight: 600; }
+.card .title{ font-weight:700; margin:0 0 8px; }
+.meta{ font-family:var(--mono); font-size:12.5px; color:#c3c8cf; line-height:1.35; word-break:break-all; }
+.kv{ margin:2px 0 6px; }
+.kv .k{ color:#9aa0a6; margin-right:6px; }
+.kv .v{ color:#c3c8cf; }
 
 /* ECP pill (top-right) */
-.ecp {
-  position: absolute; top: 10px; right: 12px;
-  background: var(--pill-bg); color: var(--pill-fg);
-  border: 1px solid color-mix(in oklab, var(--pill-fg) 35%, #000 10%);
-  padding: 2px 10px; border-radius: 999px; font-weight: 600; letter-spacing: .3px;
+.pill{
+  position:absolute; top:10px; right:12px; border-radius:999px;
+  padding:2px 10px; font-weight:700; letter-spacing:.3px;
+  background:#0d1117; border:1px solid #2b3038; color:#8ab4f8;
 }
 
-/* Meta rows (hash / timestamp) */
-.hash, .ts {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12.5px; line-height: 1.35;
-  color: color-mix(in oklab, var(--fg) 75%, var(--muted));
-  word-break: break-all; margin: 2px 0 6px 0;
-}
+/* actions row */
+.actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.actions .btn{ flex:1 1 calc(50% - 8px); }
+@media (min-width:760px){ .actions .btn{ flex:0 0 auto; } }
 
-/* --------------------------- Modal / Certificate -------------------------- */
-dialog {
-  border: 0; border-radius: 14px; padding: 14px;
-  background: var(--panel); color: var(--fg);
-  width: min(780px, 96vw); box-shadow: var(--shadow);
-}
-dialog::backdrop { background: rgba(0,0,0,.45); }
-dialog .close, dialog button.close {
-  position: absolute; top: 10px; right: 12px;
-  background: var(--btn-muted); color: var(--btn-muted-fg);
-  border-radius: 10px; padding: 8px 12px; border: 0;
-}
+/* grid for Recent list */
+#recent-list{ display:grid; grid-template-columns:1fr; gap:14px; }
+@media (min-width:760px){ #recent-list{ grid-template-columns:1fr 1fr; } }
 
-/* JSON/preview inside certificate dialog */
-dialog pre, .cert-pre, .json-view {
-  background: var(--input-bg); color: var(--fg);
-  border: 1px solid var(--input-border);
-  border-radius: 10px; padding: 12px; margin: 10px 0;
-  max-height: 60vh; overflow: auto; white-space: pre-wrap;
+/* modal (GitHub-style) */
+dialog#cert-modal{
+  border:0; padding:0; border-radius:12px; background:var(--panel);
+  color:var(--text); width:min(720px, 94vw);
 }
+dialog#cert-modal::backdrop{ background:rgba(0,0,0,.55); }
+.modal-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px; border-bottom:1px solid var(--border);
+}
+.modal-body{ padding:16px; }
+.modal-actions{
+  display:flex; gap:10px; padding:14px; border-top:1px solid var(--border);
+}
+.close{ background:#2b2f36; color:#fff; border:0; border-radius:10px; height:36px; padding:0 12px; }
+.code{ background:#0e1116; border:1px solid #2c313a; border-radius:10px; padding:12px; overflow:auto; font-family:var(--mono); font-size:12.5px; }
 
-/* ------------------------------ Utilities --------------------------------- */
-.hidden { display: none !important; }
-.center { text-align: center; }
-.right { text-align: right; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; }
-.row > * { flex: 1 1 240px; }
-
-/* subtle separator for card footers if you need it */
-.hr { height: 1px; background: var(--panel-border); margin: 10px 0; }
-</style>
+/* helper */
+*, *::before, *::after{ box-sizing:border-box; }
