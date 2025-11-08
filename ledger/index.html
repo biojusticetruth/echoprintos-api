@@ -1,382 +1,109 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EchoprintOS — BioJustice</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EchoprintOS — Verify • Recent</title>
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
-  <!-- Supabase + JSZip (for .zip) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#f7f4ee;           /* parchment */
-      --card:#ffffff;         /* cards on parchment */
-      --ink:#2a2a2a;          /* text */
-      --muted:#6c6c6c;
-      --sprout:#1CC467;       /* BioJustice green */
-      --ring:#e7e2d6;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Arial,sans-serif}
-    a{color:inherit}
-    .wrap{max-width:980px;margin:0 auto;padding:28px 16px 72px}
-    header{display:flex;gap:16px;align-items:center;margin:8px 0 24px}
-    .sprout{width:22px;height:22px;border-radius:50%;background:
-      radial-gradient(circle at 55% 35%, #1CC467 0 60%, transparent 61%),
-      radial-gradient(circle at 35% 60%, #1CC467 0 60%, transparent 61%);
-      box-shadow:0 0 0 2px var(--sprout) inset;border:2px solid var(--sprout);opacity:.9}
-    h1{font-family:"Playfair Display",serif;font-weight:600;letter-spacing:.2px;margin:0;font-size:28px}
-    .sub{color:var(--muted);margin-top:4px}
-    .grid{display:grid;gap:16px}
-    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
-
-    .panel{background:var(--card);border:1px solid var(--ring);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.04);padding:18px}
-    .title{font-family:"Playfair Display",serif;font-size:22px;margin:4px 0 12px}
-    label{font-size:13px;color:var(--muted);display:block;margin:6px 0 6px}
-    input[type=text], textarea{
-      width:100%;padding:12px 14px;border:1px solid #dad5c7;border-radius:12px;background:#fff;
-      outline:none;box-shadow:none;transition:border .15s;
-    }
-    input[type=text]:focus, textarea:focus{border-color:#c9c2b0}
-    textarea{min-height:120px;resize:vertical}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .btn{
-      appearance:none;border:0;border-radius:999px;padding:12px 18px;font-weight:600;cursor:pointer;
-      background:var(--sprout);color:#fff;box-shadow:0 4px 12px rgba(28,196,103,.25);
-    }
-    .btn.ghost{background:#fff;color:var(--ink);border:1px solid #dad5c7;box-shadow:none}
-    .btn.icon{display:inline-flex;gap:8px;align-items:center}
-    .pill{padding:10px 14px;border:1px dashed #d9d2c2;border-radius:12px;background:#fffefc}
-
-    .result{border-top:1px dashed #e3decf;margin-top:14px;padding-top:14px}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;word-break:break-all}
-    .downloads{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-    .downloads .btn{background:#fff;color:var(--ink);border:1px solid #dad5c7}
-    .downloads .btn:hover{border-color:#c9c2b0}
-
-    .feed-item{padding:14px;border:1px solid #ece6d6;border-radius:12px;background:#fff}
-    .feed-title{font-weight:600}
-    .muted{color:var(--muted)}
-
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;place-items:center;padding:20px}
-    .modal.open{display:grid}
-    .sheet{max-width:520px;width:100%;background:#fff;border-radius:16px;padding:18px;border:1px solid var(--ring)}
-    .sheet h3{font-family:"Playfair Display",serif;margin:6px 0 8px}
-    .close{float:right;background:#fff;border:1px solid #ddd;border-radius:10px;padding:6px 10px;cursor:pointer}
-
-    /* Small helper */
-    .hint{font-size:12px;color:var(--muted);margin-top:6px}
-    .error{color:#b00020;font-size:13px;margin-top:8px}
-    .ok{color:#237f3f;font-size:13px;margin-top:8px}
-  </style>
+  <!-- BioJustice parchment-light theme -->
+  <link rel="stylesheet" href="./theme.css?v=41">
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="sprout"></div>
-      <div>
-        <h1>EchoprintOS</h1>
-        <div class="sub">BioJustice parchment — generate, verify, and download certificates.</div>
+
+  <header class="site-head">
+    <div class="brand">
+      <div class="sprout">🌱</div>
+      <h1>EchoprintOS</h1>
+    </div>
+    <nav class="tabs">
+      <a href="#verify" data-tab="verify" class="tab">Verify</a>
+      <a href="#feed"   data-tab="feed"   class="tab">Recent</a>
+    </nav>
+  </header>
+
+  <!-- VERIFY -->
+  <section id="verify" class="panel">
+    <h2>Verify an Echoprint</h2>
+    <p class="muted">Paste an <strong>ECP</strong> (e.g., <code>ECP-20251108105702814</code>) or a 64-hex hash.</p>
+    <form id="verify-form" class="row">
+      <input id="verify-input" class="input" placeholder="ECP-… or 64-hex hash" autocomplete="off">
+      <button id="verify-btn" class="btn" type="submit">Verify</button>
+      <button id="clear-btn"  class="btn ghost" type="button">Clear</button>
+    </form>
+    <div id="verify-result" class="mt"></div>
+  </section>
+
+  <!-- FEED -->
+  <section id="feed" class="panel">
+    <div class="feed-head">
+      <h2>Recent Echoprints</h2>
+      <button id="refresh-btn" class="btn ghost">Refresh</button>
+    </div>
+    <div id="recent-list" class="grid"></div>
+  </section>
+
+  <!-- Card template -->
+  <template id="card-template">
+    <article class="card">
+      <header class="card-top">
+        <h3 class="title"></h3>
+        <span class="ecp-pill"></span>
+      </header>
+      <div class="meta">
+        <div><span class="label">Timestamp (UTC)</span><span class="ts"></span></div>
       </div>
-    </header>
-
-    <div class="grid">
-      <!-- Generate -->
-      <section class="panel">
-        <div class="title">Generate</div>
-        <label>Title</label>
-        <input id="gTitle" type="text" placeholder="Untitled" />
-        <label>Permalink (optional)</label>
-        <input id="gPermalink" type="text" placeholder="https://…" />
-        <label>Media URL (optional)</label>
-        <input id="gMedia" type="text" placeholder="https://…/image.jpg" />
-        <label>Text to hash (SHA-256) — or choose a file below</label>
-        <textarea id="gText" placeholder="Paste any content to hash…"></textarea>
-        <div class="row" style="margin-top:10px">
-          <input id="gFile" type="file" />
-          <button id="gBtn" class="btn">Generate</button>
-        </div>
-
-        <div id="gMsg" class="hint"></div>
-
-        <div class="result" id="gResult" style="display:none">
-          <div class="mono"><b>ECP ID:</b> <span id="rEcp"></span></div>
-          <div class="mono"><b>SHA-256:</b> <span id="rHash"></span></div>
-          <div class="mono"><b>Timestamp (UTC):</b> <span id="rTime"></span></div>
-          <div class="downloads">
-            <button id="dnPng" class="btn icon">📄 Download Certificate (.png)</button>
-            <button id="dnJson" class="btn icon">🗂️ Download Data (.json)</button>
-            <button id="dnZip" class="btn icon">📦 Download Both (.zip)</button>
-            <button id="viewCert" class="btn ghost">View Certificate</button>
+      <div class="actions">
+        <a class="link subtle open-post"    hidden>Open post</a>
+        <a class="link subtle view-image"   hidden>View image</a>
+        <a class="link subtle open-verify">Open in Verify</a>
+        <a class="link subtle view-more">View</a>
+        <a class="link subtle cert-open">Certificate</a>
+        <a class="link subtle dl-json">Download JSON</a>
+        <a class="link subtle dl-cert">Download certificate</a>
+      </div>
+      <div class="details" hidden>
+        <div class="meta two">
+          <div>
+            <span class="label">ECP</span>
+            <div class="copyline">
+              <input class="mono ecp" readonly>
+              <button class="copy">Copy</button>
+            </div>
+          </div>
+          <div>
+            <span class="label">Hash</span>
+            <div class="copyline">
+              <input class="mono hash" readonly>
+              <button class="copy">Copy</button>
+            </div>
           </div>
         </div>
-      </section>
-
-      <!-- Verify -->
-      <section class="panel">
-        <div class="title">Verify</div>
-        <label>EchoprintOS Record ID</label>
-        <input id="vEcp" type="text" placeholder="ECP-XXXXXXXXXXXXXXX" />
-        <label>SHA-256 (optional)</label>
-        <input id="vHash" type="text" placeholder="Paste full 64-hex…" />
-        <div class="row" style="margin-top:10px">
-          <label class="pill">Upload JSON… <input id="vJson" type="file" accept=".json" style="display:none"></label>
-          <button id="vBtn" class="btn">Verify Record</button>
-          <button id="vClear" class="btn ghost">Clear</button>
+        <div class="meta">
+          <div><span class="label">Permalink</span><a class="permalink" target="_blank" rel="noopener"></a></div>
+          <div><span class="label">Media</span><a class="media" target="_blank" rel="noopener"></a></div>
         </div>
-        <div id="vMsg" class="hint"></div>
-      </section>
+      </div>
+    </article>
+  </template>
+
+  <!-- Certificate modal -->
+  <dialog id="cert-modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong>Echoprint Certificate</strong>
+        <button id="cert-close" class="btn ghost sm">Close</button>
+      </div>
+      <div id="cert-body"></div>
+      <div class="modal-actions">
+        <button id="cert-dl-json" class="btn">Download JSON</button>
+        <button id="cert-dl-cert" class="btn ghost">Download certificate</button>
+      </div>
     </div>
+  </dialog>
 
-    <!-- Live Feed -->
-    <section class="panel" style="margin-top:16px">
-      <div class="title">Live Feed</div>
-      <div id="feed" class="grid" style="grid-template-columns:1fr 1fr 1fr"></div>
-    </section>
-  </div>
+  <!-- ENV (Supabase URL + anon) then App -->
+  <script src="./env.js?v=41"></script>
+  <script type="module" src="./app.js?v=41"></script>
 
-  <!-- Certificate Modal -->
-  <div id="modal" class="modal" aria-hidden="true">
-    <div class="sheet">
-      <button class="close" id="mClose">Close</button>
-      <h3>Echoprint Certificate</h3>
-      <canvas id="certCanvas" width="980" height="1386" style="width:100%;border:1px solid #eee;border-radius:10px"></canvas>
-      <div class="hint">This is a preview. Use the download buttons for a PNG/JSON/ZIP.</div>
-    </div>
-  </div>
-
-<script>
-/* ====== CONFIG ====== */
-const SUPABASE_URL = "https://YOUR-PROJECT-ref.supabase.co";   // ← replace
-const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";                     // ← replace
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const TABLE = "echoprints";
-
-/* ====== UTIL ====== */
-const $ = (id) => document.getElementById(id);
-const fmtUTC = (iso) => new Date(iso).toUTCString().replace("GMT","UTC");
-const pad = (n, l=2) => String(n).padStart(l,"0");
-const makeECP = (d=new Date()) =>
-  `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
-
-async function sha256Text(text){
-  const enc = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-async function sha256File(file){
-  const buf = await file.arrayBuffer();
-  const dig = await crypto.subtle.digest("SHA-256", buf);
-  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-/* ====== CERT RENDER (Canvas) ====== */
-function drawCertificate(ctx, rec){
-  const W=ctx.canvas.width, H=ctx.canvas.height;
-  // parchment bg
-  ctx.fillStyle="#f7f4ee"; ctx.fillRect(0,0,W,H);
-  // frame
-  ctx.strokeStyle="#e0d7c3"; ctx.lineWidth=4; ctx.strokeRect(40,40,W-80,H-80);
-
-  // title sprout + masthead
-  ctx.fillStyle="#1CC467";
-  ctx.beginPath(); // simple sprout glyph
-  ctx.arc(W/2-20,160,20,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W/2+20,160,20,0,Math.PI*2); ctx.fill();
-
-  ctx.fillStyle="#1a1a1a";
-  ctx.font="700 58px 'Playfair Display', serif";
-  ctx.textAlign="center";
-  ctx.fillText("Echoprint Certificate", W/2, 260);
-
-  // quote/title block
-  ctx.font="600 40px 'Playfair Display', serif";
-  const t = rec.title || "Untitled";
-  wrapFill(ctx, `“${t}”`, W/2, 430, 760, 48);
-
-  // details
-  ctx.textAlign="left";
-  ctx.font="600 28px Inter, sans-serif"; ctx.fillText("Record ID", 120, 650);
-  ctx.font="400 26px Inter, sans-serif"; ctx.fillText(rec.record_id, 120, 688);
-
-  ctx.font="600 28px Inter, sans-serif"; ctx.fillText("SHA-256 Hash", 120, 742);
-  ctx.font="400 26px Inter, sans-serif"; wrapFill(ctx, rec.hash, 120, 780, 740, 30, "left");
-
-  ctx.font="600 28px Inter, sans-serif"; ctx.fillText("Timestamp (UTC)", 120, 892);
-  ctx.font="400 26px Inter, sans-serif"; ctx.fillText(fmtUTC(rec.timestamp), 120, 930);
-}
-function wrapFill(ctx, text, x, y, maxW, lh, align="center"){
-  const words = text.split(/\s+/); let line="", lines=[], w;
-  for(const word of words){
-    w = ctx.measureText(line + (line?" ":"") + word).width;
-    if(w>maxW && line){ lines.push(line); line = word; } else line = line ? line+" "+word : word;
-  }
-  if(line) lines.push(line);
-  const startY = y - ((lines.length-1)*lh)/2;
-  ctx.textAlign = align;
-  lines.forEach((ln,i)=>ctx.fillText(ln, x, startY + i*lh));
-}
-
-/* ====== STATE ====== */
-let currentRecord = null;
-
-/* ====== GENERATE FLOW ====== */
-$("gBtn").addEventListener("click", async () => {
-  try{
-    $("gMsg").className="hint"; $("gMsg").textContent="Computing hash…";
-    const file = $("gFile").files[0];
-    const text = $("gText").value.trim();
-    if(!file && !text){ $("gMsg").className="error"; $("gMsg").textContent="Add text or choose a file."; return; }
-
-    const hash = file ? await sha256File(file) : await sha256Text(text);
-    $("gMsg").textContent="Saving to ledger…";
-
-    const now = new Date();
-    const rec = {
-      record_id: makeECP(now),
-      title: $("gTitle").value.trim() || "Untitled",
-      hash,
-      timestamp: now.toISOString(),
-      permalink: $("gPermalink").value.trim() || null,
-      media_url: $("gMedia").value.trim() || null
-    };
-
-    // Try insert
-    let { data, error } = await sb.from(TABLE).insert(rec).select().single();
-
-    // If duplicate hash, load existing row
-    if(error && error.code === "23505"){
-      const found = await sb.from(TABLE).select("*").eq("hash", hash).single();
-      if(found.data){
-        data = found.data;
-        $("gMsg").className="ok";
-        $("gMsg").textContent="Already recorded. Loaded existing entry.";
-      } else {
-        throw error;
-      }
-    } else if(error){
-      throw error;
-    } else {
-      $("gMsg").className="ok";
-      $("gMsg").textContent="Saved.";
-    }
-
-    currentRecord = data;
-    showResult(data);
-    refreshFeed();
-  }catch(e){
-    $("gMsg").className="error";
-    $("gMsg").textContent = "Error: " + (e.message || JSON.stringify(e));
-  }
-});
-
-function showResult(rec){
-  $("gResult").style.display="block";
-  $("rEcp").textContent = rec.record_id;
-  $("rHash").textContent = rec.hash;
-  $("rTime").textContent = fmtUTC(rec.timestamp);
-}
-
-/* ====== DOWNLOADS ====== */
-$("dnJson").addEventListener("click", () => {
-  if(!currentRecord) return;
-  const blob = new Blob([JSON.stringify(currentRecord,null,2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${currentRecord.record_id}.json`;
-  a.click();
-});
-$("dnPng").addEventListener("click", () => {
-  if(!currentRecord) return;
-  const c = $("certCanvas"); const ctx = c.getContext("2d");
-  drawCertificate(ctx, currentRecord);
-  c.toBlob(b => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(b);
-    a.download = `${currentRecord.record_id}.png`;
-    a.click();
-  });
-});
-$("dnZip").addEventListener("click", async () => {
-  if(!currentRecord) return;
-  const zip = new JSZip();
-  // JSON
-  zip.file(`${currentRecord.record_id}.json`, JSON.stringify(currentRecord,null,2));
-  // PNG
-  const c = $("certCanvas"); const ctx = c.getContext("2d"); drawCertificate(ctx, currentRecord);
-  const pngBlob = await new Promise(res=>c.toBlob(res, "image/png"));
-  const pngArr = await pngBlob.arrayBuffer();
-  zip.file(`${currentRecord.record_id}.png`, pngArr);
-  const out = await zip.generateAsync({type:"blob"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(out);
-  a.download = `${currentRecord.record_id}.zip`;
-  a.click();
-});
-$("viewCert").addEventListener("click", () => {
-  if(!currentRecord) return;
-  const c = $("certCanvas"); const ctx = c.getContext("2d");
-  drawCertificate(ctx, currentRecord);
-  $("modal").classList.add("open");
-  $("modal").setAttribute("aria-hidden","false");
-});
-$("mClose").addEventListener("click", () => {
-  $("modal").classList.remove("open");
-  $("modal").setAttribute("aria-hidden","true");
-});
-
-/* ====== VERIFY ====== */
-$("vBtn").addEventListener("click", async ()=>{
-  $("vMsg").className="hint"; $("vMsg").textContent="Looking up…";
-  const ecp = $("vEcp").value.trim();
-  const h = $("vHash").value.trim();
-  try{
-    let q = sb.from(TABLE).select("*").limit(1);
-    if(ecp) q = q.eq("record_id", ecp);
-    if(h) q = q.eq("hash", h);
-    const { data, error } = await q.single();
-    if(error) throw error;
-    currentRecord = data;
-    showResult(data);
-    $("vMsg").className="ok"; $("vMsg").textContent="Verified.";
-  }catch(e){
-    $("vMsg").className="error"; $("vMsg").textContent = "Not found: " + (e.message||e);
-  }
-});
-$("vJson").addEventListener("change", async (ev)=>{
-  const f = ev.target.files[0]; if(!f) return;
-  try{
-    const obj = JSON.parse(await f.text());
-    $("vEcp").value = obj.record_id||"";
-    $("vHash").value = obj.hash||"";
-  }catch{}
-});
-$("vClear").addEventListener("click", ()=>{
-  $("vEcp").value=""; $("vHash").value=""; $("vMsg").textContent="";
-});
-
-/* ====== FEED ====== */
-async function refreshFeed(){
-  const el = $("feed");
-  const { data } = await sb.from(TABLE).select("record_id,title,hash,timestamp").order("timestamp",{ascending:false}).limit(9);
-  el.innerHTML = (data||[]).map(r=>`
-    <div class="feed-item">
-      <div class="feed-title">${r.title||"Untitled"}</div>
-      <div class="mono muted" style="margin-top:6px">${r.record_id}</div>
-      <div class="mono muted" style="margin-top:4px">${fmtUTC(r.timestamp)}</div>
-      <button class="btn ghost" style="margin-top:10px" onclick="loadOne('${r.record_id}')">Load</button>
-    </div>`).join("");
-}
-window.loadOne = async (id)=>{
-  const { data } = await sb.from(TABLE).select("*").eq("record_id", id).single();
-  if(data){ currentRecord = data; showResult(data); }
-};
-refreshFeed(); setInterval(refreshFeed, 25000);
-</script>
 </body>
 </html>
