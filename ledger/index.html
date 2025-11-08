@@ -1,60 +1,54 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EchoprintOS – Verify & Recent</title>
-
-  <!-- UI theme -->
-  <link rel="stylesheet" href="/ledger/theme.css?v=1" />
-
-  <!-- Supabase client (ESM via CDN) -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
-    window._supabase_createClient = createClient; // expose for app.js
-  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EchoprintOS</title>
+  <link rel="stylesheet" href="/ledger/theme.css">
 </head>
 <body>
-  <main class="wrap">
+  <main>
     <section class="panel hero">
       <h1>EchoprintOS</h1>
       <p class="muted">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
     </section>
 
-    <!-- Verify -->
+    <!-- VERIFY -->
     <section class="panel">
       <h2>Verify</h2>
-      <input id="verify-input" class="input" placeholder="ECP-XXXXXXXX or 64-hex hash" />
-      <div class="actions" style="margin-top:10px">
+      <div class="row">
+        <input id="verify-input" class="input" placeholder="ECP-XXXXXXXX or 64-hex hash">
+      </div>
+      <div class="row gap">
         <button id="verify-btn" class="btn">Verify</button>
-        <button id="recent-btn" class="btn-ghost">Recent</button>
+        <button id="recent-btn" class="btn btn-ghost">Recent</button>
       </div>
       <div id="verify-result" class="stack" style="margin-top:12px"></div>
     </section>
 
-    <!-- Recent -->
+    <!-- RECENT -->
     <section class="panel">
       <h2>Recent</h2>
-      <div id="recent-list" aria-live="polite"></div>
+      <div id="recent-list" class="grid"></div>
     </section>
   </main>
 
   <!-- Certificate modal -->
   <dialog id="cert-modal">
-    <div class="modal-head">
-      <strong>Echoprint Certificate</strong>
-      <button id="cert-close" class="btn-ghost small">Close</button>
-    </div>
-    <div id="cert-body" class="modal-body"></div>
-    <div class="modal-actions">
-      <button id="cert-open"  class="btn">Open in Verify</button>
-      <button id="cert-json"  class="btn-ghost">Download JSON</button>
-      <button id="cert-dismiss" class="btn-ghost">Dismiss</button>
+    <div class="modal">
+      <div class="modal-head">
+        <strong>Echoprint Certificate</strong>
+        <button id="cert-close" class="btn btn-ghost sm">Close</button>
+      </div>
+      <div id="cert-body" class="modal-body"></div>
+      <div class="modal-actions">
+        <button id="cert-open-verify" class="btn">Open in Verify</button>
+        <button id="cert-download-json" class="btn btn-ghost">Download JSON</button>
+      </div>
     </div>
   </dialog>
 
-  <!-- public config (safe anon) then app -->
   <script src="/ledger/env.js"></script>
-  <script type="module" src="/ledger/app.js?v=1"></script>
+  <script type="module" src="/ledger/app.js"></script>
 </body>
 </html>
