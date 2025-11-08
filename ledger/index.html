@@ -1,109 +1,39 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>EchoprintOS — Verify • Recent</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EchoprintOS</title>
 
-  <!-- BioJustice parchment-light theme -->
-  <link rel="stylesheet" href="./theme.css">
-</head>
-<body>
-
-  <header class="site-head">
-    <div class="brand">
-      <div class="sprout">🌱</div>
-      <h1>EchoprintOS</h1>
-    </div>
-    <nav class="tabs">
-      <a href="#verify" data-tab="verify" class="tab">Verify</a>
-      <a href="#feed"   data-tab="feed"   class="tab">Recent</a>
-    </nav>
-  </header>
-
-  <!-- VERIFY -->
-  <section id="verify" class="panel">
-    <h2>Verify an Echoprint</h2>
-    <p class="muted">Paste an <strong>ECP</strong> (e.g., <code>ECP-20251108105702814</code>) or a 64-hex hash.</p>
-    <form id="verify-form" class="row">
-      <input id="verify-input" class="input" placeholder="ECP-… or 64-hex hash" autocomplete="off">
-      <button id="verify-btn" class="btn" type="submit">Verify</button>
-      <button id="clear-btn"  class="btn ghost" type="button">Clear</button>
-    </form>
-    <div id="verify-result" class="mt"></div>
-  </section>
-
-  <!-- FEED -->
-  <section id="feed" class="panel">
-    <div class="feed-head">
-      <h2>Recent Echoprints</h2>
-      <button id="refresh-btn" class="btn ghost">Refresh</button>
-    </div>
-    <div id="recent-list" class="grid"></div>
-  </section>
-
-  <!-- Card template -->
-  <template id="card-template">
-    <article class="card">
-      <header class="card-top">
-        <h3 class="title"></h3>
-        <span class="ecp-pill"></span>
+    <!-- IMPORTANT: keep ONLY this stylesheet so dark theme wins -->
+    <link rel="stylesheet" href="theme.css?v=5" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>EchoprintOS</h1>
+        <p class="muted">
+          Generate a hash, verify by ECP or 64-hex hash, and browse recent records.
+        </p>
       </header>
-      <div class="meta">
-        <div><span class="label">Timestamp (UTC)</span><span class="ts"></span></div>
-      </div>
-      <div class="actions">
-        <a class="link subtle open-post"    hidden>Open post</a>
-        <a class="link subtle view-image"   hidden>View image</a>
-        <a class="link subtle open-verify">Open in Verify</a>
-        <a class="link subtle view-more">View</a>
-        <a class="link subtle cert-open">Certificate</a>
-        <a class="link subtle dl-json">Download JSON</a>
-        <a class="link subtle dl-cert">Download certificate</a>
-      </div>
-      <div class="details" hidden>
-        <div class="meta two">
-          <div>
-            <span class="label">ECP</span>
-            <div class="copyline">
-              <input class="mono ecp" readonly>
-              <button class="copy">Copy</button>
-            </div>
-          </div>
-          <div>
-            <div class="card">
-  <div class="mono">${rec.ecp_id}</div>
-  <div class="muted">${formatUTC(rec.timestamp_iso || rec.timestamp_human_utc)}</div>
-  <div class="card-hash mono">${rec.hash}</div> <!-- hidden on feed -->
-            </div>
-          </div>
+
+      <section class="panel">
+        <h2>Verify</h2>
+        <div class="row">
+          <input id="q" placeholder="ECP-XXXXXXXX or 64-hex hash" />
+          <button id="btnVerify" class="btn btn-primary">Verify</button>
+          <button id="btnRecent" class="btn">Recent</button>
         </div>
-        <div class="meta">
-          <div><span class="label">Permalink</span><a class="permalink" target="_blank" rel="noopener"></a></div>
-          <div><span class="label">Media</span><a class="media" target="_blank" rel="noopener"></a></div>
-        </div>
-      </div>
-    </article>
-  </template>
+        <div id="status" class="small muted" style="margin-top:8px;"></div>
+        <div id="verify-result" style="margin-top:12px;"></div>
+      </section>
 
-  <!-- Certificate modal -->
-  <dialog id="cert-modal">
-    <div class="modal-card">
-      <div class="modal-head">
-        <strong>Echoprint Certificate</strong>
-        <button id="cert-close" class="btn ghost sm">Close</button>
-      </div>
-      <div id="cert-body"></div>
-      <div class="modal-actions">
-        <button id="cert-dl-json" class="btn">Download JSON</button>
-        <button id="cert-dl-cert" class="btn ghost">Download certificate</button>
-      </div>
-    </div>
-  </dialog>
+      <section class="panel">
+        <h2>Recent</h2>
+        <div id="feed" class="grid"></div>
+      </section>
+    </main>
 
-  <!-- ENV (Supabase URL + anon) then App -->
-  <script src="./env.js?v=41"></script>
-  <script type="module" src="./app.js?v=41"></script>
-
-</body>
+    <script type="module" src="app.js?v=5"></script>
+  </body>
 </html>
