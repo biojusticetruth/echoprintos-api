@@ -19,14 +19,11 @@
 
 <!-- Certificate modal -->
 <dialog id="cert-modal">
-  <div class="modal-head">
-    <strong>Echoprint Certificate</strong>
-    <button class="close">Close</button>
-  </div>
-  <div class="modal-body"></div>
+  <div class="modal-head"><div>Echoprint Certificate</div><button class="btn-ghost" id="cert-close">Close</button></div>
+  <div class="modal-body" id="cert-body"></div>
   <div class="modal-actions">
-    <button class="btn btn-success">Download JSON</button>
-    <button class="btn btn-ghost">Close</button>
+    <button class="btn btn-success" id="cert-json">Download JSON</button>
+    <button class="btn btn-ghost" id="cert-dismiss">Close</button>
   </div>
 </dialog>
 
