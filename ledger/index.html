@@ -66,37 +66,44 @@
     </div>
   </header>
 
-  <main class="container">
-    <!-- HERO (like your screenshot) -->
-    <section class="hero">
-      <h1>Verify with EchoprintOS</h1>
-      <p class="sub">Check or confirm authenticity.</p>
-      <p class="quote">“Each record in the Proof-of-Care Chain can be independently verified. Enter an EchoprintOS Record ID or upload a JSON verification file to confirm authenticity.”</p>
-    </section>
+  <main class="wrap">
 
-    <!-- VERIFY -->
-    <section id="verifySection" class="card">
-      <h2>Verify</h2>
-      <div class="row" style="margin-bottom:10px">
-        <!-- empty field on purpose (no placeholder text) -->
-        <input id="q" type="text" inputmode="text" autocomplete="off" aria-label="ECP or 64-hex hash" />
-      </div>
-      <div class="row">
-        <button id="btnVerify" class="btn">Verify</button>
-        <button id="btnClear"  class="btn ghost">Clear</button>
-      </div>
-      <div id="verifyResult" class="result tiny" style="margin-top:12px"></div>
-    </section>
+  <!-- HERO -->
+  <section class="card hero">
+    <h1 class="xl">Verify with EchoprintOS</h1>
+    <p class="lead">Check or confirm authenticity.</p>
+    <blockquote class="note">
+      “Each record in the Proof-of-Care Chain can be independently verified.
+      Enter an EchoprintOS Record ID or a 64-hex hash to verify authenticity.”
+    </blockquote>
+  </section>
 
-    <!-- RECENT -->
-    <section class="card">
-      <h2>Recent</h2>
-      <div id="recentStatus" class="tiny muted">Loading…</div>
-      <div id="recent" class="list"></div>
-    </section>
+  <!-- VERIFY -->
+  <section id="verifySection" class="card">
+    <h2>Verify</h2>
 
-    <footer>© EchoprintOS</footer>
-  </main>
+    <div class="row">
+      <input id="q" type="text" inputmode="text" autocomplete="off"
+             placeholder="" aria-label="ECP or 64-hex hash" />
+      <button id="btnVerify" class="btn">Verify</button>
+      <button id="btnPaste"  class="btn ghost">Paste</button>
+      <button id="btnClear"  class="btn ghost">Clear</button>
+    </div>
+
+    <div id="verifyResult" class="result tiny" style="margin-top:.5rem"></div>
+  </section>
+
+  <!-- RECENT -->
+  <section class="card">
+    <h2>Recent</h2>
+    <div id="recentStatus" class="tiny muted">Loading…</div>
+    <div id="recent" class="list"></div>
+  </section>
+
+</main>
+
+<!-- keep the script include at the very end of the body -->
+<script type="module" src="/js/main.hard.js"></script>
 
   <!-- Hard-coded JS (no ENV) -->
   <script type="module" src="/js/main.hard.js"></script>
