@@ -1,36 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EchoprintOS · Capture</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/ledger/css/base.css">
+  <link rel="stylesheet" href="/ledger/theme.css" />
+  <style>
+    .wrap{width:min(960px,100% - 24px);margin-inline:auto;padding:14px}
+    header.site{display:flex;align-items:center;gap:14px;margin:10px 0 16px}
+    header.site .brand{font-weight:700;letter-spacing:.2px}
+    header.site nav a{margin-right:10px;text-decoration:none}
+    header.site nav a.active{font-weight:600;text-decoration:underline}
+    .card{border:1px solid var(--border,#28303a);border-radius:12px;padding:14px;background:var(--card,#0f1318)}
+    .tiny{font-size:.9rem;opacity:.85}
+    code{font-family:ui-monospace,Menlo,Consolas,monospace}
+  </style>
 </head>
 <body>
-  <header class="site">
-    <div class="wrap bar">
+  <div class="wrap">
+    <header class="site">
       <div class="brand">EchoprintOS</div>
-      <nav>
+      <nav aria-label="Primary">
+        <a href="/">Home</a>
         <a href="/ledger/">Ledger</a>
-        <a href="/ledger/capture.html">Capture</a>
-        <a href="https://echoprintos.org" target="_blank">About</a>
+        <a href="/ledger/capture.html" class="active">Capture</a>
+        <a href="/ledger/about.html">About</a>
       </nav>
-    </div>
-  </header>
+    </header>
 
-  <main class="wrap">
-    <section class="panel">
-      <h2>Capture (coming soon)</h2>
-      <p class="muted">This page will record social posts (LinkedIn / X / Substack) into the ledger with ECP, timestamp, and hidden hash.</p>
+    <section class="card" style="margin-bottom:1rem">
+      <h1 style="margin:.25rem 0 .5rem 0">Capture</h1>
+      <p class="tiny" style="margin:0">
+        This page will accept social-media posts (Substack / LinkedIn / X) and create Echoprints automatically.
+        For now, it’s a placeholder so navigation stays consistent.
+      </p>
     </section>
-  </main>
 
-  <footer class="site">
-    <div class="wrap">© EchoprintOS</div>
-  </footer>
-
-  <!-- Scripts (order matters) -->
-  <script src="/ledger/env.js"></script>
-  <script type="module" src="/ledger/js/main.js"></script>
+    <section class="card">
+      <h2>Coming next</h2>
+      <ul class="tiny" style="margin:0 0 0 1rem">
+        <li>Webhook endpoint to accept post payloads</li>
+        <li>Serverless stamp + insert into <code>public.echoprints</code></li>
+        <li>Confirmation panel with ECP and timestamp</li>
+      </ul>
+    </section>
+  </div>
 </body>
 </html>
