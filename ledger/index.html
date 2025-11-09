@@ -164,6 +164,49 @@
       .btn{ padding:0 14px; }
       .nav .row{ gap:12px; }
     }
+
+    /* ——— Title stack + micro-type ——— */
+.eyebrow{
+  display:inline-block; margin-bottom:6px;
+  font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+  color: var(--muted);
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--stroke);
+  border-radius: 999px; padding:4px 10px;
+}
+.subtitle{
+  margin:6px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* Softer card edges + balanced paddings */
+.hero{ border-radius: 24px; padding: 24px 22px 20px; }
+.card{ border-radius: 18px; padding: 20px 20px 18px; }
+
+/* ——— Make input shorter and centered within the card ——— */
+.controls{ align-items: flex-start; }
+#q{
+  width: min(100%, 560px);      /* cap the width so it doesn’t hang off the card */
+  border-radius: 14px;          /* a touch rounder = softer */
+}
+@media (max-width: 480px){
+  #q{ width: 100%; }            /* full width on small phones */
+}
+
+/* Button/field height harmony + gentler look */
+:root{ --h: 42px; }             /* down from 44px for a less blocky feel */
+.btn{ border-radius: 999px; }    /* pill buttons = elegant */
+
+/* Nav tint match (same tone for brand & links) */
+.nav a{ color:#bcd2e0; }
+.nav a.active{ color:#041d17; }  /* readable over mint gradient */
+
+/* Optional helper text under the input */
+.help{
+  margin-top:6px; font-size: 13px; color: var(--muted);
+  opacity:.9;
+}
   </style>
 </head>
 <body>
