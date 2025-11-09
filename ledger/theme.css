@@ -319,3 +319,79 @@ h1,h2,.brand{ font-family: "Newsreader", ui-serif, Georgia, serif; }
 .pill       { display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);
               border:1px solid rgba(255,255,255,.05); color:#bfccda;font-weight:600;letter-spacing:.08em;font-size:.78rem; }
 .display    { font-family:"Playfair Display",ui-serif,Georgia,serif;font-weight:700;letter-spacing:-.01em; }
+
+/* === EchoprintOS – polish overrides (spacing, input fit, button pop) === */
+
+/* 1) Make widths predictable so the ECP field never hangs off the card */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* 2) Reduce space between nav and first card */
+.nav .row { height: 52px; }               /* was 56 */
+.wrap { padding-top: 8px !important; }    /* gentle tighten */
+.card { margin: 12px 0; }                 /* was 16–18 */
+.card:first-of-type { margin-top: 8px; }  /* closer to nav */
+
+/* 3) Keep the ECP input inside the card on all phones */
+.verify-row,
+.controls { 
+  display: grid; 
+  grid-template-columns: 1fr; 
+  gap: var(--gap);
+}
+#q { 
+  width: 100%;
+  min-width: 0;          /* critical to prevent overflow in flex/grid */
+}
+@media (min-width: 720px){
+  .verify-row,
+  .controls { grid-template-columns: 1fr auto auto auto; align-items: center; }
+}
+
+/* 4) Make buttons stand out a bit more (subtle glow + contrast) */
+.btn {
+  border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 6px 24px rgba(0,0,0,.35);
+}
+.btn.primary{
+  background: linear-gradient(180deg, #20e3b2, #10d9a9);
+  color: var(--accent-ink);
+  border-color: rgba(32,227,178,.55);
+  box-shadow:
+    0 10px 28px rgba(32,227,178,.28),
+    0 0 0 1px rgba(32,227,178,.32) inset;
+}
+.btn.primary:hover{ filter: brightness(1.06); }
+.btn.outline, .btn.ghost { background: rgba(255,255,255,.04); }
+.btn.outline:hover, .btn.ghost:hover { background: rgba(255,255,255,.07); }
+.btn:focus-visible{
+  outline: 2px solid rgba(32,227,178,.6);
+  outline-offset: 2px;
+}
+
+/* 5) Inputs visually stronger, but still soft */
+input[type="text"], input[type="search"]{
+  background: rgba(8,10,14,.9);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+input:focus{
+  border-color: rgba(32,227,178,.55);
+  box-shadow:
+    0 0 0 3px rgba(32,227,178,.16),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* 6) Glass cards a touch tighter and crisper */
+.card.glass{
+  backdrop-filter: blur(14px) saturate(120%);
+  background: linear-gradient(180deg, rgba(18,20,26,.72), rgba(18,20,26,.58));
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.04) inset,
+    0 24px 60px rgba(0,0,0,.40);
+  border-radius: 18px;
+  padding: 18px;
+}
