@@ -32,17 +32,21 @@
          <strong>64-hex hash</strong>, then press <em>Verify</em>.</p>
     </section>
 
-    <section class="card">
-      <h2>Verify</h2>
-      <div class="controls">
-        <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="ECP-…  or  64-hex hash" />
-        <button id="btnVerify" class="btn primary">Verify</button>
-        <button id="btnClear"  class="btn outline">Clear</button>
-        <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
-      </div>
-      <div id="verifyResult" class="result" aria-live="polite"></div>
-    </section>
+   <section class="card verify" aria-labelledby="verify-title">
+  <h2 id="verify-title">Verify</h2>
+
+  <label for="q" class="visually-hidden">EchoprintOS Record ID or 64-hex hash</label>
+  <input id="q" class="field" type="text" inputmode="text" autocomplete="off"
+         placeholder="ECP-…  or  64-hex hash" />
+
+  <div class="actions">
+    <button id="btnVerify" class="btn primary">Verify</button>
+    <button id="btnClear"  class="btn outline">Clear</button>
+    <button id="btnPaste"  class="btn ghost"   title="Paste from clipboard">Paste</button>
+  </div>
+
+  <div id="verifyResult" class="result"></div>
+</section>
 
     <section class="card">
       <h2>Recent</h2>
