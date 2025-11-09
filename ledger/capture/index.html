@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>EchoprintOS • Capture</title>
+  <link rel="stylesheet" href="/css/site.css"/>
+  <style>
+    .row{display:flex; gap:.75rem; flex-wrap:wrap}
+    .stretch{flex:1 1 420px; min-width:240px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+    .hint{opacity:.75}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container row" style="justify-content:space-between; align-items:center">
+      <a class="brand" href="/">🌱 EchoprintOS</a>
+      <nav class="row" style="gap:1rem">
+        <a href="/ledger/">Ledger</a>
+        <a class="active" href="/capture/">Capture</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Capture</h1>
+      <p class="hint">Create a 64-hex SHA-256 and a verification file. (This page does not write to the public ledger.)</p>
+
+      <label class="tiny">Title (optional)</label>
+      <input id="title" class="stretch" type="text" autocomplete="off" placeholder="">
+
+      <div class="row" style="margin-top:.75rem">
+        <textarea id="text" class="stretch" rows="6" placeholder="Paste text to hash (or leave empty and choose a file below)"></textarea>
+      </div>
+
+      <div class="row" style="margin-top:.5rem">
+        <input id="file" type="file"/>
+        <button id="btnHash" class="btn">Compute hash</button>
+      </div>
+
+      <div id="out" style="margin-top:1rem; display:none">
+        <div class="mini">
+          <div class="mini-title">Result</div>
+          <div class="mini-meta"><strong>ECP</strong>: <span id="ecp" class="mono"></span></div>
+          <div class="mini-meta"><strong>Hash</strong>: <span id="hash" class="mono"></span></div>
+          <div class="mini-meta"><strong>Timestamp</strong>: <span id="ts" class="mono"></span></div>
+          <div class="row" style="margin-top:.5rem">
+            <button id="btnCopyJSON" class="btn">Copy JSON</button>
+            <button id="btnDownload"  class="btn ghost">Download verification.json</button>
+            <button id="btnSend"      class="btn ghost">Send to Make webhook</button>
+          </div>
+        </div>
+      </div>
+
+      <details style="margin-top:.75rem">
+        <summary class="tiny">Webhook (optional)</summary>
+        <input id="webhook" class="stretch" type="url" placeholder="https://hook.us1.make.com/…"/>
+        <div class="tiny hint">Saved in your browser only (localStorage).</div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="container tiny muted" style="margin:1.5rem 0 2.5rem">© EchoprintOS</footer>
+
+  <script type="module" src="/js/capture.hard.js"></script>
+</body>
+</html>
