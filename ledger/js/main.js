@@ -1,4 +1,15 @@
 // /ledger/js/main.js
+const getENV = () => (window && window.ENV) ? window.ENV : null;
+function assertENV(where="init"){
+  const E = getENV();
+  if (!E || !E.SUPABASE_URL || !E.SUPABASE_ANON_KEY){
+    const t = document.getElementById("verifyResult") || document.getElementById("recentStatus");
+    if (t) t.innerHTML = `<span style="color:#ff6b6b">Missing ENV in ${where}. Check /ledger/env.js.</span>`;
+    console.error(`Missing ENV in ${where}`);
+    return null;
+  }
+  return E;
+}
 
 /* ========= helpers ========= */
 const $ = (sel, root=document) => root.querySelector(sel);
@@ -14,12 +25,15 @@ if (!window.ENV || !ENV.SUPABASE_URL || !ENV.SUPABASE_ANON_KEY) {
   console.error("Missing ENV. Check /ledger/env.js");
 }
 
+const SUPABASE_URL = "https://cyndhzyfaffprdebclnw.supabase.co",
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
+
 const supa = {
-  url: (path) => `${ENV.SUPABASE_URL}${path}`,
+  url: (path) => `${SUPABASE_URL}${path}`,
   headers: () => ({
     "Content-Type": "application/json",
-    "apikey": ENV.SUPABASE_ANON_KEY,
-    "Authorization": `Bearer ${ENV.SUPABASE_ANON_KEY}`
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
   })
 };
 
