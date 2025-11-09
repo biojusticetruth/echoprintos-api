@@ -1,155 +1,121 @@
-/* ========= SUPABASE (HARDCODE — replace these 2 strings) ========= */
+// === Hardcoded config (no env) ===========================================
 const SUPABASE_URL = "https://cyndhzyfaffprdebclnw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c".
+const ANON_KEY      = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c"; // safe for public reads
+const VIEW          = "v_echoprints_public";    // the read-only view
+// ========================================================================
 
-/* ---- helpers ---- */
-const $  = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-const withTimeout = (p, ms=12000) =>
-  Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Request timeout")), ms))]);
-const isHex64  = (s) => /^[0-9a-f]{64}$/i.test(String(s||"").trim());
-const isECP    = (s) => /^ECP-\d{17,}$/.test(String(s||"").trim());
-const tHash    = (h) => (h && h.length >= 12) ? `${h.slice(0,6)}…${h.slice(-6)}` : (h || "—");
-
-const supa = {
-  url: (path) => `${HARDCODE.SUPABASE_URL}${path}`,
-  headers: () => ({
-    "Content-Type": "application/json",
-    "apikey": HARDCODE.SUPABASE_ANON_KEY,
-    "Authorization": `Bearer ${HARDCODE.SUPABASE_ANON_KEY}`
-  })
+const headers = {
+  apikey: ANON_KEY,
+  Authorization: `Bearer ${ANON_KEY}`,
+  Accept: "application/json"
 };
 
-/* ---- VERIFY ---- */
-async function verify(q){
-  const out = $("#verifyResult");
-  if (!out) return;
-  out.textContent = "";
+const $ = (s) => document.querySelector(s);
+const qInput = $("#q");
+const resultEl = $("#verifyResult");
+const recentWrap = $("#recent");
+const recentStatus = $("#recentStatus");
 
-  const term = String(q || $("#q")?.value || "").trim();
-  if (!term) return;
-  if (!isECP(term) && !isHex64(term)) {
-    out.innerHTML = `<span class="muted">Enter a valid ECP (ECP-YYYY…) or 64-hex hash.</span>`;
+// Prefill from ?q=... and auto-verify
+const params = new URLSearchParams(location.search);
+const initialQ = params.get("q");
+if (initialQ) { qInput.value = initialQ; verify(); }
+
+$("#btnVerify").addEventListener("click", verify);
+$("#btnClear").addEventListener("click", () => {
+  qInput.value = ""; resultEl.textContent = "";
+});
+$("#btnPaste").addEventListener("click", async () => {
+  try { qInput.value = await navigator.clipboard.readText(); verify(); }
+  catch { /* ignore */ }
+});
+
+// Smart verify: ECP, record_id, or 64-hex hash
+async function verify() {
+  const q = qInput.value.trim();
+  resultEl.textContent = "";
+  if (!q) return;
+
+  const hex64 = /^[0-9a-f]{64}$/i.test(q);
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${VIEW}`);
+  url.searchParams.set("select","ecp_id,record_id,title,permalink,hash,timestamp_iso");
+  // PostgREST OR: try ecp_id, record_id, hash
+  url.searchParams.set("or",`(ecp_id.eq.${q},record_id.eq.${q}${hex64?`,hash.eq.${q}`:""})`);
+  url.searchParams.set("limit","10");
+
+  const r = await fetch(url, { headers });
+  const rows = await r.json();
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    resultEl.textContent = "No match.";
     return;
   }
+  if (rows.length > 1) {
+    resultEl.textContent = `Multiple matches (${rows.length}). Showing below.`;
+  } else {
+    resultEl.textContent = "Match found.";
+  }
+  // also render them as mini-cards under “Recent”
+  renderList(rows, recentWrap, /*override*/ true);
+}
 
-  out.textContent = "Looking up…";
+// Load recent
+(async function loadRecent(){
   try {
-    const params = new URLSearchParams({
-      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso,hash",
-      limit: "1",
-      order: "timestamp_iso.desc"
-    });
-    params.append("or", `(record_id.eq.${term},hash.eq.${term})`);
+    const url = new URL(`${SUPABASE_URL}/rest/v1/${VIEW}`);
+    url.searchParams.set("select","ecp_id,record_id,title,permalink,hash,timestamp_iso");
+    url.searchParams.set("order","timestamp_iso.desc");
+    url.searchParams.set("limit","10");
+    const r = await fetch(url, { headers });
+    const rows = await r.json();
+    recentStatus.textContent = "";
+    renderList(rows, recentWrap);
+  } catch (e) {
+    recentStatus.textContent = "Could not load recent.";
+  }
+})();
 
-    const res = await withTimeout(
-      fetch(supa.url(`/rest/v1/v_echoprints_public?${params}`), { headers: supa.headers() })
-    );
-    if (!res.ok) { out.textContent = `Error: ${await res.text()}`; return; }
+function renderList(rows, container, override = false){
+  if (override) container.innerHTML = "";
+  for (const row of rows) {
+    const title = row.title?.trim() || "(Untitled)";
+    const ts    = row.timestamp_iso ? human(row.timestamp_iso) : "";
+    const hash  = row.hash ? row.hash.slice(0,8) + "…" : "—";
+    const json  = row.permalink || null;
 
-    const rows = await res.json();
-    if (!rows.length) { out.textContent = "No match."; return; }
-
-    const r = rows[0];
-    const verifyHref = `/?q=${encodeURIComponent(r.record_id)}`;
-
-    out.innerHTML = `
-      <div class="item">
-        <h4 class="mono">${r.record_id}</h4>
-        <div class="meta">${r.timestamp_human_utc || ""}</div>
-        ${r.title ? `<div>${r.title}</div>` : ""}
-        <div class="actions tiny">
-          <a href="${verifyHref}">Verify</a>
-          ${r.permalink ? ` · <a href="${r.permalink}" target="_blank">Post</a>` : ""}
-          ${r.hash ? ` · <code class="hash" data-full="${r.hash}" title="Tap to copy hash">${tHash(r.hash)}</code>` : ""}
-        </div>
+    const card = document.createElement("article");
+    card.className = "mini";
+    card.innerHTML = `
+      <div class="mini-title">${escapeHtml(title)}</div>
+      <div class="mini-meta">
+        <span class="mono">${escapeHtml(row.ecp_id || row.record_id || "")}</span>
+        • ${escapeHtml(ts)} • <span class="mono">${hash}</span>
+      </div>
+      <div class="mini-links">
+        ${json ? `<a href="${json}" target="_blank" rel="noopener">JSON</a>` : ``}
+        <a href="/ledger/?q=${encodeURIComponent(row.ecp_id || row.record_id || "")}">Verify</a>
       </div>
     `;
-    bindHashCopy();
-  } catch (e) {
-    out.textContent = `Network error: ${e.message}`;
+    container.appendChild(card);
   }
 }
 
-/* ---- RECENT FEED ---- */
-async function loadRecent(){
-  const status = $("#recentStatus"); const feed = $("#recent");
-  if (!status || !feed) return;
-  status.textContent = "Loading…";
-
+function human(iso){
   try {
-    const params = new URLSearchParams({
-      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso,hash",
-      order: "timestamp_iso.desc",
-      limit: "12"
-    });
-    const res = await withTimeout(
-      fetch(supa.url(`/rest/v1/v_echoprints_public?${params}`), { headers: supa.headers() })
-    );
-    if (!res.ok) { status.textContent = `Error: ${await res.text()}`; return; }
-
-    const rows = await res.json();
-    feed.innerHTML = rows.map(r => {
-      const verifyHref = `/?q=${encodeURIComponent(r.record_id)}`;
-      return `
-        <article class="item">
-          <h4>${r.title ? escapeHtml(r.title) : "Untitled"}</h4>
-          <div class="mono" style="margin:.15rem 0">${r.record_id}</div>
-          <div class="meta">${r.timestamp_human_utc || ""}</div>
-          <div class="actions tiny">
-            <a href="${verifyHref}">Verify</a>
-            ${r.permalink ? ` · <a href="${r.permalink}" target="_blank">Post</a>` : ""}
-            ${r.hash ? ` · <code class="hash" data-full="${r.hash}" title="Tap to copy hash">${tHash(r.hash)}</code>` : ""}
-          </div>
-        </article>
-      `;
-    }).join("");
-    status.textContent = rows.length ? "" : "No records yet.";
-    bindHashCopy();
-  } catch (e) {
-    status.textContent = `Network error: ${e.message}`;
-  }
+    const d = new Date(iso);
+    const now = Date.now();
+    const diff = Math.floor((now - d.getTime())/1000);
+    const mins = Math.floor(diff/60);
+    if (diff < 60) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins/60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs/24);
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleString();
+  } catch { return iso; }
 }
 
-/* ---- clipboard helpers ---- */
-function bindHashCopy(){
-  $$(".hash").forEach(el => {
-    el.onclick = async () => {
-      const full = el.getAttribute("data-full") || el.textContent;
-      try { await navigator.clipboard.writeText(full); flash(el, "Copied!"); }
-      catch { flash(el, "Copied"); }
-    };
-  });
-}
-function flash(el, text){
-  const old = el.textContent;
-  el.textContent = text;
-  setTimeout(()=>{ el.textContent = tHash(el.getAttribute("data-full") || old); }, 900);
-}
-async function pasteInto(){
-  const input = $("#q"); if (!input) return;
-  try {
-    const t = await navigator.clipboard.readText();
-    if (t) input.value = t.trim();
-  } catch {
-    const t = prompt("Paste value");
-    if (t) input.value = t.trim();
-  }
-}
-
-/* ---- events ---- */
-$("#btnVerify")?.addEventListener("click", () => verify());
-$("#btnClear") ?.addEventListener("click", () => { const i=$("#q"); if(i){ i.value=""; } $("#verifyResult").textContent=""; });
-$("#btnPaste") ?.addEventListener("click", pasteInto);
-
-/* support /?q=... deep-link */
-const qp = new URLSearchParams(location.search);
-if (qp.get("q")) { const v = qp.get("q"); const i=$("#q"); if(i){i.value=v;} verify(v); }
-
-/* initial feed */
-loadRecent();
-
-/* ---- util ---- */
-function escapeHtml(s){
-  return String(s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+function escapeHtml(s){ return String(s)
+  .replaceAll("&","&amp;").replaceAll("<","&lt;")
+  .replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
