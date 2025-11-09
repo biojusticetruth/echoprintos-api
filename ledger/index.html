@@ -1,91 +1,104 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>EchoprintOS • Ledger</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="./theme.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS · Ledger</title>
   <style>
-    :root { color-scheme: dark; }
-    body { margin:0; background:#0b0c10; color:#e8eaed; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
-    a { color:#8ab4f8; text-decoration:none; }
-    a:hover { text-decoration:underline; }
-    .wrap { width:min(980px, 100% - 24px); margin:0 auto; }
-    header { border-bottom:1px solid #222831; background:#0b0c10cc; backdrop-filter:saturate(140%) blur(8px); position:sticky; top:0; z-index:10; }
-    nav { display:flex; gap:16px; align-items:center; padding:12px 0; }
-    nav .brand { font-weight:700; color:#e8eaed; }
-    .card { padding:14px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
-    .tiny { font-size:12.5px; }
-    .muted { color:#9aa0a6; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    /* verify form: buttons under the field */
-    .vcol { display:flex; flex-direction:column; gap:8px; }
-    input[type=text] { width:100%; padding:10px 12px; border:1px solid #2c313a; border-radius:10px; background:#0e1116; color:#e8eaed; }
-    .btn { background:#1f6feb; color:#fff; border:0; border-radius:10px; padding:10px 12px; cursor:pointer; }
-    .btn.ghost { background:#2b2f36; color:#e8eaed; }
-    .btn.small { padding:7px 10px; border-radius:8px; }
-    .result:empty, #recentStatus:empty { display:none; }
-    /* recent grid */
-    #recent { display:grid; grid-template-columns:1fr; gap:12px; }
-    @media (min-width:760px){ #recent { grid-template-columns:1fr 1fr; } }
-    .item { padding:12px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
-    .item h4 { margin:0 0 2px 0; font-weight:600; color:#e8eaed; }
-    .rowline { margin-top:.35rem; }
-    /* verify result hash truncation */
-    .hashline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .truncate { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .pill { display:inline-block; padding:2px 8px; border:1px solid #2b3038; border-radius:999px; background:#0d1117; color:#8ab4f8; font-weight:600; letter-spacing:.2px; }
-    main { padding:18px 0 48px 0; }
+    :root{
+      --bg:#0b0f13; --card:#11161c; --text:#e8edf3; --muted:#9aa3af;
+      --accent:#20e3b2; --accent-ink:#062e28; --border:#1b2230;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
+    a{color:var(--text);text-decoration:none}
+    .container{max-width:900px;margin:0 auto;padding:24px}
+    /* top bar */
+    .nav{position:sticky;top:0;z-index:10;background:rgba(11,15,19,.85);backdrop-filter:saturate(120%) blur(10px);border-bottom:1px solid var(--border)}
+    .nav-inner{display:flex;gap:24px;align-items:center;min-height:56px}
+    .brand{font-weight:700;letter-spacing:.2px;display:flex;align-items:center;gap:.5rem}
+    .brand .sprout{filter:drop-shadow(0 0 4px rgba(32,227,178,.35))}
+    .navlinks{margin-left:auto;display:flex;gap:20px}
+    .navlinks a{opacity:.9}
+    .navlinks a.active{color:var(--accent)}
+    /* hero */
+    .hero{margin:28px 0 18px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0));border:1px solid var(--border);border-radius:16px;padding:28px}
+    .hero h1{font-size:44px;line-height:1.05;margin:0 0 10px 0;letter-spacing:.2px}
+    .hero .sub{font-size:18px;color:var(--muted);margin:0 0 14px 0}
+    .hero .quote{color:var(--muted);font-style:italic;margin:0}
+    /* cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin:18px 0}
+    h2{margin:0 0 12px 0;font-size:28px;line-height:1.2}
+    .tiny{font-size:13px}
+    .muted{color:var(--muted)}
+    /* verify layout */
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    input[type="text"]{
+      flex:1 1 520px;background:#0c1117;border:1px solid var(--border);color:var(--text);
+      border-radius:12px;padding:14px 14px;font-size:16px;outline:none;
+    }
+    .btn{
+      appearance:none;border:0;border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer;
+      background:var(--accent);color:var(--accent-ink)
+    }
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+    /* results + list */
+    .result .ok{color:#7ef3c4;margin-bottom:6px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .list{display:grid;grid-template-columns:1fr;gap:12px}
+    .item{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#0e141b}
+    .item h4{margin:0 0 4px 0;font-size:16px}
+    .item .meta{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:var(--muted)}
+    @media (min-width:720px){ .list{grid-template-columns:1fr 1fr} }
+    footer{margin:36px 0;color:var(--muted);font-size:13px}
   </style>
 </head>
 <body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand"><span class="sprout">🌱</span> EchoprintOS</div>
+      <nav class="navlinks">
+        <a class="active" href="/ledger/">Ledger</a>
+        <a href="/capture/">Capture</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
 
-<header>
-  <div class="wrap">
-    <nav>
-      <a class="brand" href="/ledger/">EchoprintOS Ledger</a>
-      <!-- remove About for now per your note
-      <a class="tiny" href="/ledger/about.html">About</a>
-      -->
-    </nav>
-  </div>
-</header>
+  <main class="container">
+    <!-- HERO (like your screenshot) -->
+    <section class="hero">
+      <h1>Verify with EchoprintOS</h1>
+      <p class="sub">Check or confirm authenticity.</p>
+      <p class="quote">“Each record in the Proof-of-Care Chain can be independently verified. Enter an EchoprintOS Record ID or upload a JSON verification file to confirm authenticity.”</p>
+    </section>
 
-<main class="wrap">
-
-  <!-- Directions -->
-  <section class="card" style="margin:12px 0">
-    <h2 style="margin:0 0 .25rem 0">How to verify</h2>
-    <p class="tiny muted" style="margin:0">
-      Paste an <strong>ECP</strong> (e.g., <code class="mono">ECP-20251108034124863</code>)
-      or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
-    </p>
-  </section>
-
-  <!-- Verify -->
-  <section id="verifySection" class="card" style="margin:12px 0">
-    <h2 style="margin:0 0 .5rem 0">Verify</h2>
-    <div class="vcol">
-      <input id="q" type="text" inputmode="text" autocomplete="off"
-             placeholder="ECP or 64-hex hash" aria-label="ECP or 64-hex hash" />
-      <div style="display:flex; gap:8px;">
+    <!-- VERIFY -->
+    <section id="verifySection" class="card">
+      <h2>Verify</h2>
+      <div class="row" style="margin-bottom:10px">
+        <!-- empty field on purpose (no placeholder text) -->
+        <input id="q" type="text" inputmode="text" autocomplete="off" aria-label="ECP or 64-hex hash" />
+      </div>
+      <div class="row">
         <button id="btnVerify" class="btn">Verify</button>
         <button id="btnClear"  class="btn ghost">Clear</button>
       </div>
-    </div>
-    <div id="verifyResult" class="result tiny" style="margin-top:.6rem"></div>
-  </section>
+      <div id="verifyResult" class="result tiny" style="margin-top:12px"></div>
+    </section>
 
-  <!-- Recent -->
-  <section class="card" style="margin:12px 0">
-    <h2 style="margin:0 0 .5rem 0">Recent</h2>
-    <div id="recentStatus" class="tiny muted"></div>
-    <div id="recent"></div>
-  </section>
+    <!-- RECENT -->
+    <section class="card">
+      <h2>Recent</h2>
+      <div id="recentStatus" class="tiny muted">Loading…</div>
+      <div id="recent" class="list"></div>
+    </section>
 
-</main>
+    <footer>© EchoprintOS</footer>
+  </main>
 
-<!-- scripts -->
-<script type="module" src="./js/main.hard.js"></script>
+  <!-- Hard-coded JS (no ENV) -->
+  <script type="module" src="/js/main.hard.js"></script>
 </body>
 </html>
