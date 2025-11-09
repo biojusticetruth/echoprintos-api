@@ -1,26 +1,91 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EchoprintOS API</title>
-    <style>
-      body {
-        background-color: #f9f7f4;
-        font-family: 'Georgia', serif;
-        color: #1d1e21;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-      }
-      h1 { color: #17a053; }
-      p { font-size: 1.1em; color: #8e90a3; }
-    </style>
-  </head>
-  <body>
-    <h1>🌱 EchoprintOS API</h1>
-    <p>Your verification node is live.</p>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <title>EchoprintOS • Ledger</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="./theme.css">
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0c10; color:#e8eaed; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    a { color:#8ab4f8; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .wrap { width:min(980px, 100% - 24px); margin:0 auto; }
+    header { border-bottom:1px solid #222831; background:#0b0c10cc; backdrop-filter:saturate(140%) blur(8px); position:sticky; top:0; z-index:10; }
+    nav { display:flex; gap:16px; align-items:center; padding:12px 0; }
+    nav .brand { font-weight:700; color:#e8eaed; }
+    .card { padding:14px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
+    .tiny { font-size:12.5px; }
+    .muted { color:#9aa0a6; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    /* verify form: buttons under the field */
+    .vcol { display:flex; flex-direction:column; gap:8px; }
+    input[type=text] { width:100%; padding:10px 12px; border:1px solid #2c313a; border-radius:10px; background:#0e1116; color:#e8eaed; }
+    .btn { background:#1f6feb; color:#fff; border:0; border-radius:10px; padding:10px 12px; cursor:pointer; }
+    .btn.ghost { background:#2b2f36; color:#e8eaed; }
+    .btn.small { padding:7px 10px; border-radius:8px; }
+    .result:empty, #recentStatus:empty { display:none; }
+    /* recent grid */
+    #recent { display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width:760px){ #recent { grid-template-columns:1fr 1fr; } }
+    .item { padding:12px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
+    .item h4 { margin:0 0 2px 0; font-weight:600; color:#e8eaed; }
+    .rowline { margin-top:.35rem; }
+    /* verify result hash truncation */
+    .hashline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .truncate { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #2b3038; border-radius:999px; background:#0d1117; color:#8ab4f8; font-weight:600; letter-spacing:.2px; }
+    main { padding:18px 0 48px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/ledger/">EchoprintOS Ledger</a>
+      <!-- remove About for now per your note
+      <a class="tiny" href="/ledger/about.html">About</a>
+      -->
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Directions -->
+  <section class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .25rem 0">How to verify</h2>
+    <p class="tiny muted" style="margin:0">
+      Paste an <strong>ECP</strong> (e.g., <code class="mono">ECP-20251108034124863</code>)
+      or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
+    </p>
+  </section>
+
+  <!-- Verify -->
+  <section id="verifySection" class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .5rem 0">Verify</h2>
+    <div class="vcol">
+      <input id="q" type="text" inputmode="text" autocomplete="off"
+             placeholder="ECP or 64-hex hash" aria-label="ECP or 64-hex hash" />
+      <div style="display:flex; gap:8px;">
+        <button id="btnVerify" class="btn">Verify</button>
+        <button id="btnClear"  class="btn ghost">Clear</button>
+      </div>
+    </div>
+    <div id="verifyResult" class="result tiny" style="margin-top:.6rem"></div>
+  </section>
+
+  <!-- Recent -->
+  <section class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .5rem 0">Recent</h2>
+    <div id="recentStatus" class="tiny muted"></div>
+    <div id="recent"></div>
+  </section>
+
+</main>
+
+<!-- scripts -->
+<script type="module" src="./js/main.hard.js"></script>
+</body>
 </html>
