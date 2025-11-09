@@ -1,68 +1,77 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>EchoprintOS • Ledger</title>
-  <link rel="stylesheet" href="/css/site.css"/>
+  <meta charset="utf-8">
+  <title>EchoprintOS • Capture</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    /* tiny touch-ups that won’t fight your existing CSS */
-    .eyebrow {font-size:.95rem; opacity:.75; margin:.35rem 0 0}
-    .hero {padding:1.25rem 1.25rem 0}
-    .hero h1{font-size:2.1rem; line-height:1.1; margin:0 0 .25rem}
-    .quote{font-style:italic; opacity:.85; margin:.5rem 0 0}
-    .row{display:flex; gap:.75rem; flex-wrap:wrap; align-items:center}
-    .row .stretch{flex:1 1 420px; min-width:240px}
-    .btn{cursor:pointer}
-    .mini{border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.85rem; margin:.6rem 0}
-    .mini-title{font-weight:600; margin:0 0 .25rem}
-    .mini-meta{font-size:.9rem; opacity:.75; margin:.25rem 0 .4rem}
-    .mini-links a{font-size:.9rem; text-decoration:underline; margin-right:1rem}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+    body{background:#0b0c10;color:#e8eaed;font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;margin:0}
+    .wrap{width:min(820px,92vw);margin:0 auto;padding:28px 0 80px}
+    a{color:#8ab4f8}
+    .nav{display:flex;gap:22px;padding:8px 0 18px}
+    .card{background:#121419;border:1px solid #1f232b;border-radius:18px;padding:26px}
+    h1{margin:8px 0 4px}
+    .drop{border:1px dashed #2a2f3a;border-radius:12px;padding:26px;text-align:center;color:#a7b0bc}
+    .btn{appearance:none;border:1px solid #1e2a22;background:#18d0a8;color:#04261f;border-radius:10px;height:42px;padding:0 16px;font-weight:700;cursor:pointer}
+    .ghost{background:#10141a;color:#cdd3da;border:1px solid #222834}
+    pre{background:#0f1116;border:1px solid #232a38;border-radius:12px;padding:14px;overflow:auto}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
   </style>
 </head>
 <body>
-  <header class="nav">
-    <div class="container row" style="justify-content:space-between; align-items:center">
-      <a class="brand" href="/">🌱 EchoprintOS</a>
-      <nav class="row" style="gap:1rem">
-        <a class="active" href="/ledger/">Ledger</a>
-        <a href="/capture/">Capture</a>
-        <a href="/about/">About</a>
-      </nav>
-    </div>
-  </header>
+  <div class="wrap">
+    <div class="nav"><a href="/">← Ledger</a> <span style="opacity:.6">Capture</span></div>
+    <div class="card">
+      <h1>Capture</h1>
+      <p>Drop a file or pick one. We’ll compute a <b>SHA-256</b> (64-hex) locally.</p>
 
-  <main class="container">
-    <!-- Hero -->
-    <section class="card hero">
-      <h1>Verify with EchoprintOS</h1>
-      <div class="eyebrow">Check or confirm authenticity.</div>
-      <p class="quote">“Each record in the Proof-of-Care Chain can be independently verified. Enter an <em>EchoprintOS Record ID</em> or a <em>64-hex hash</em> to verify authenticity.”</p>
-    </section>
-
-    <!-- Verify -->
-    <section id="verifySection" class="card" style="margin-top:1rem">
-      <h2>Verify</h2>
-      <div class="row" style="margin:.5rem 0 .25rem">
-        <input id="q" class="stretch" type="text" inputmode="text" autocomplete="off" aria-label="ECP, EchoprintOS Record ID, or 64-hex hash"/>
-        <button id="btnVerify" class="btn">Verify</button>
-        <button id="btnPaste"  class="btn ghost">Paste</button>
-        <button id="btnClear"  class="btn ghost">Clear</button>
+      <div class="drop" id="drop">
+        <input id="file" type="file" style="display:none">
+        <button class="btn ghost" onclick="document.getElementById('file').click()">Choose file…</button>
+        <div id="picked" style="margin-top:8px;opacity:.8">No file selected.</div>
       </div>
-      <div id="verifyResult" class="tiny" style="margin-top:.5rem"></div>
-    </section>
 
-    <!-- Recent -->
-    <section class="card" style="margin-top:1rem">
-      <h2>Recent</h2>
-      <div id="recentStatus" class="tiny muted">Loading…</div>
-      <div id="recent"></div>
-    </section>
-  </main>
+      <div id="out" style="margin-top:18px;display:none">
+        <div><b>Hash</b></div>
+        <div class="mono" id="hash" style="margin:6px 0 10px"></div>
+        <div class="mono" id="ecp"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn" onclick="copy('#hash')">Copy hash</button>
+          <button class="btn ghost" onclick="copy('#json')">Copy JSON</button>
+        </div>
+        <div style="margin-top:14px"><b>Payload</b></div>
+        <pre id="json" class="mono">{}</pre>
+      </div>
+    </div>
+  </div>
 
-  <footer class="container tiny muted" style="margin:1.5rem 0 2.5rem">© EchoprintOS</footer>
+<script>
+const $ = s=>document.querySelector(s);
+const fileEl = $('#file');
+fileEl.addEventListener('change', handle);
 
-  <script type="module" src="/js/ledger.hard.js"></script>
+async function handle(){
+  const f = fileEl.files[0];
+  if(!f){ $('#picked').textContent='No file selected.'; return; }
+  $('#picked').textContent = `${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  const buf = await f.arrayBuffer();
+  const hashHex = await sha256hex(buf);
+  const ts = new Date().toISOString();
+  const ecp = 'ECP-' + ts.replace(/\D/g,'').slice(0,14); // simple client ECP
+  $('#hash').textContent = hashHex;
+  $('#ecp').textContent  = `Record ID: ${ecp}`;
+  $('#json').textContent = JSON.stringify({ record_id: ecp, title: f.name, hash: hashHex, timestamp_iso: ts }, null, 2);
+  $('#out').style.display='block';
+}
+async function sha256hex(buf){
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  const bytes = Array.from(new Uint8Array(h));
+  return bytes.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function copy(sel){
+  const t = $(sel).textContent;
+  try{ await navigator.clipboard.writeText(t); }catch{}
+}
+</script>
 </body>
 </html>
