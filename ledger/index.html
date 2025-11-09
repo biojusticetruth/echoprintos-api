@@ -73,7 +73,14 @@
       <div id="recent" class="list"></div>
     </section>
   </div>
-
+  
+<script>
+  window.addEventListener('error', e => {
+    const el = document.querySelector('#recentStatus');
+    if (el) el.textContent = 'JS error: ' + (e.error?.message || e.message);
+  });
+</script>
+  
 <script type="module" src="/ledger/js/main.hard.js?v=1"></script>
 </body>
 </html>
