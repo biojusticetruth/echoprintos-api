@@ -1,5 +1,4 @@
-// api/health.js
-module.exports = (req, res) =>
-  res.status(200).json({ ok: true, time: new Date().toISOString() });
-
-// bump
+// /api/health.js
+export default function handler(_req, res) {
+  res.status(200).json({ ok: true, ts: new Date().toISOString() });
+}
