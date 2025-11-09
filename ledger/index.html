@@ -1,79 +1,69 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EchoprintOS — Ledger</title>
+  <meta charset="utf-8">
+  <title>EchoprintOS • Ledger</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- minimal BioJustice-dark look you already have -->
+  <link rel="stylesheet" href="./theme.css">
   <style>
-    :root {
-      --bg:#0e1217; --card:#141a21; --ink:#e7edf3; --muted:#9aa6b2;
-      --accent:#1cc467; --btn:#21d4c8; --btn-ink:#051014; --ring:#253140;
-      --hint:#a7b3bf; /* softer than orange */
-    }
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto}
-    a{color:#8ad5ff;text-decoration:none} a:hover{text-decoration:underline}
-    .wrap{max-width:960px;margin:auto;padding:20px}
-    header{position:sticky;top:0;background:rgba(14,18,23,.75);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--ring);z-index:2}
-    .nav{display:flex;align-items:center;gap:28px;padding:14px 20px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
-    .sprout{width:16px;height:16px;background:var(--accent);border-radius:3px;box-shadow:0 0 12px rgba(28,196,103,.6)}
-    .nav a{color:var(--muted)} .nav a.active{color:var(--accent);font-weight:600}
-    .hero,.card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:22px;margin:18px 0}
-    .h1{font-size:44px;font-weight:800;margin:0 0 8px}
-    .row{display:flex;gap:14px;flex-wrap:wrap}
-    input[type=text]{flex:1;min-width:200px;background:#0b0f14;color:var(--ink);border:1px solid var(--ring);border-radius:12px;padding:14px}
-    .btn{background:var(--btn);color:var(--btn-ink);border:0;border-radius:12px;padding:12px 22px;font-weight:700}
-    .btn.ghost{background:#10161f;color:#cdd6df;border:1px solid var(--ring)}
-    .tiny{font-size:13px;color:var(--hint)}
-    .muted{color:var(--muted)}
-    .items{display:grid;grid-template-columns:1fr;gap:14px;margin-top:8px}
-    .item{background:#0f141a;border:1px solid var(--ring);border-radius:12px;padding:14px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    footer{color:var(--muted);padding:30px 0}
+    /* Hide helper/status rows when empty */
+    .result:empty, #recentStatus:empty { display: none; }
+    /* tiny helper classes used below */
+    .card{padding:14px;border:1px solid #28303a;border-radius:12px;background:#0f1318}
+    .row{display:flex;gap:8px;align-items:center}
+    .row input{flex:1 1 auto}
+    .btn{background:#1f6feb;color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
+    .btn.ghost{background:#2b2f36;color:#e8eaed}
+    .tiny{font-size:12.5px}
+    .muted{color:#9aa0a6}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .list{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:760px){ .list{grid-template-columns:1fr 1fr} }
+    .item{padding:12px;border:1px solid #28303a;border-radius:12px;background:#0f1318}
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <nav class="nav">
-        <div class="brand"><span class="sprout"></span> EchoprintOS</div>
-        <a class="active" href="/">Ledger</a>
-        <a href="/capture/">Capture</a>
-        <a href="/about/">About</a>
-      </nav>
-    </div>
+
+  <header style="padding:10px 0">
+    <nav style="display:flex;gap:14px;align-items:center">
+      <a href="/ledger/" style="text-decoration:none;color:#e8eaed;font-weight:600">EchoprintOS Ledger</a>
+      <a href="/ledger/about.html" class="tiny" style="color:#8ab4f8">About</a>
+    </nav>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div class="h1">EchoprintOS</div>
-      <p class="muted">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+  <main style="width:min(980px, 100% - 24px);margin:0 auto 48px auto">
+
+    <!-- Directions (short + clean, no numbers) -->
+    <section class="card" style="margin-bottom:1rem">
+      <h2 style="margin:0 0 .25rem 0">How to verify</h2>
+      <p class="tiny muted" style="margin:0">
+        Paste an <strong>ECP</strong> or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
+      </p>
     </section>
 
+    <!-- Verify (field starts empty; nothing shows below unless there’s a match) -->
     <section id="verifySection" class="card">
-      <h2 style="margin:0 0 10px">Verify</h2>
+      <h2>Verify</h2>
       <div class="row">
-        <input id="q" type="text" inputmode="latin" autocomplete="off"
-          placeholder="ECP-YYYYMMDDHHMMSSmmm or 64-hex hash" />
+        <input id="q" type="text" inputmode="text" autocomplete="off"
+               placeholder="ECP or 64-hex hash" aria-label="ECP or 64-hex hash" />
         <button id="btnVerify" class="btn">Verify</button>
-        <button id="btnClear" class="btn ghost">Clear</button>
+        <button id="btnClear"  class="btn ghost">Clear</button>
       </div>
-      <div class="tiny" style="margin-top:10px">
-        Enter an ECP (ECP-YYYY…) or a 64-hex hash.
-      </div>
-      <div id="verifyResult" style="margin-top:12px"></div>
+      <div id="verifyResult" class="result tiny" style="margin-top:.5rem"></div>
     </section>
 
-    <section class="card">
-      <h2 style="margin:0 0 10px">Recent</h2>
-      <div id="recentStatus" class="tiny">Loading…</div>
-      <div id="recent" class="items"></div>
+    <!-- Recent (status starts empty; no “Loading…” text) -->
+    <section class="card" style="margin-top:1rem">
+      <h2>Recent</h2>
+      <div id="recentStatus" class="tiny muted"></div>
+      <div id="recent" class="list"></div>
     </section>
+
   </main>
 
-  <footer class="wrap">© EchoprintOS</footer>
-
-  <!-- Hardcoded client (no ENV) -->
-  <script type="module" src="/js/main.hard.js"></script>
+  <!-- scripts (order matters) -->
+  <script type="module" src="./js/main.hard.js"></script>
 </body>
 </html>
