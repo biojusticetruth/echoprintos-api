@@ -68,5 +68,10 @@
         `ECP: ${ecp}<br/>Timestamp (UTC): ${utc}<br/>Title: ${title||'—'}<br/>Permalink: ${permalink||'—'}<br/>Platform: ${platform||'—'}`;
     });
   </script>
+    <!-- …all of your page’s HTML… -->
+
+  <!-- Scripts (order matters) -->
+  <script src="./env.js"></script>
+  <script type="module" src="./capture.html"></script>
 </body>
 </html>
