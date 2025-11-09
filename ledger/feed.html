@@ -2,97 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EchoprintOS · Feed</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ledger Feed — EchoprintOS</title>
   <style>
-    :root{--bg:#FBFBF7;--ink:#0E1B16;--muted:#5C6B73;--panel:#fff;--border:#E7ECF0;--accent:#1CC467;--radius:16px}
-    html,body{background:var(--bg);color:var(--ink);margin:0}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    main{max-width:980px;margin:48px auto;padding:0 16px}
-    h1{font-size:40px;margin:0 0 8px}
-    p.lede{color:var(--muted);margin:0 0 24px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px}
-    .label{font-size:12px;color:var(--muted);letter-spacing:.02em}
-    .ecp{font-weight:700}
-    .utc{color:var(--muted)}
-    .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .btn{display:inline-block;padding:.4rem .7rem;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin:12px 0 18px}
-    a.link{color:#0c5c35;text-decoration:none}
+    :root{--bg:#0e1217;--card:#141a21;--ink:#e7edf3;--muted:#9aa6b2;--accent:#1cc467;--ring:#253140;--btn:#21d4c8;--btn-ink:#051014}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Inter,Roboto}
+    a{color:#8ad5ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:960px;margin:auto;padding:20px}
+    header{position:sticky;top:0;background:rgba(14,18,23,.75);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--ring);z-index:2}
+    .nav{display:flex;align-items:center;gap:28px;padding:14px 20px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .sprout{width:16px;height:16px;background:var(--accent);border-radius:3px;box-shadow:0 0 12px rgba(28,196,103,.6)}
+    .nav a{color:var(--muted)} .nav a.active{color:var(--accent);font-weight:600}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:22px;margin:18px 0}
+    h1{font-size:40px;margin:0 0 10px} .tiny{font-size:13px;color:#a7b3bf}
+    .items{display:grid;grid-template-columns:1fr;gap:14px}
+    .item{background:#0f141a;border:1px solid var(--ring);border-radius:12px;padding:14px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--btn);color:var(--btn-ink);border:0;border-radius:12px;padding:12px 18px;font-weight:700}
+    .btn.ghost{background:#10161f;color:#cdd6df;border:1px solid var(--ring)}
+    footer{color:var(--muted);padding:30px 0}
   </style>
 </head>
 <body>
-<main>
-  <div class="topbar">
-    <h1>Recent Echoprints</h1>
-    <div>
-      <a class="link" href="./capture.html">+ Capture</a>
+  <header>
+    <div class="wrap">
+      <nav class="nav">
+        <div class="brand"><span class="sprout"></span> EchoprintOS</div>
+        <a href="/">Ledger</a>
+        <a href="/capture/">Capture</a>
+        <a href="/about/">About</a>
+      </nav>
     </div>
-  </div>
-  <p class="lede">Public ledger view (no hashes). Click a card’s link to open the original post.</p>
+  </header>
 
-  <div id="list" class="grid"></div>
-</main>
+  <main class="wrap">
+    <section class="card">
+      <h1>Ledger Feed</h1>
+      <div id="status" class="tiny">Loading…</div>
+      <div id="feed" class="items" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:14px">
+        <button id="loadMore" class="btn">Load more</button>
+        <button id="toTop" class="btn ghost" onclick="window.scrollTo({top:0,behavior:'smooth'})">Back to top</button>
+      </div>
+    </section>
+  </main>
 
-<script>
-/* ─── CONFIG: replace these two values ───────────────────────────────────── */
-const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';  // ← change
-const SUPABASE_ANON = 'YOUR-ANON-KEY';                      // ← change
-/* We read from a public view that hides the hash. Adjust the view name and
-   column names if yours differ. These columns are expected:
-   record_id, title, permalink, timestamp_human_utc, timestamp_iso
-*/
-const VIEW = 'v_echoprints_public';
+  <footer class="wrap">© EchoprintOS</footer>
 
-async function fetchRecent(limit=24){
-  const qs = new URLSearchParams({
-    select: 'record_id,title,permalink,timestamp_human_utc,timestamp_iso',
-    order: 'timestamp_iso.desc',
-    limit: String(limit)
-  });
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${VIEW}?${qs}`,{
-    headers:{
-      'apikey': SUPABASE_ANON,
-      'Authorization': `Bearer ${SUPABASE_ANON}`
+  <!-- HARD-CODED Supabase fetcher (no ENV) -->
+  <script type="module">
+    // >>> Replace these two constants with your project values <<<
+    const SUPABASE_URL = "https://cyndhzyfaffprdebclnw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
+
+    const supa = {
+      url: (path) => `${SUPABASE_URL}${path}`,
+      headers: () => ({
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      })
+    };
+
+    const $ = (s) => document.querySelector(s);
+    const withTimeout = (p, ms=15000) =>
+      Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Request timeout")), ms))]);
+
+    const PAGE = 20;
+    let offset = 0;
+    let loading = false;
+    let done = false;
+
+    async function loadPage(){
+      if (loading || done) return;
+      loading = true;
+      $("#status").textContent = offset === 0 ? "Loading…" : "Loading more…";
+
+      try {
+        const params = new URLSearchParams({
+          select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso",
+          order: "timestamp_iso.desc",
+          limit: String(PAGE),
+          offset: String(offset)
+        });
+
+        const res = await withTimeout(fetch(
+          supa.url(`/rest/v1/v_echoprints_public?${params}`),
+          { headers: supa.headers() }
+        ));
+
+        if (!res.ok) {
+          $("#status").textContent = `Error: ${await res.text()}`;
+          loading = false;
+          return;
+        }
+
+        const rows = await res.json();
+        if (rows.length === 0 && offset === 0) {
+          $("#status").textContent = "No records yet.";
+          $("#loadMore").style.display = "none";
+          loading = false;
+          return;
+        }
+
+        const html = rows.map(r => `
+          <article class="item">
+            <h3 class="mono" style="margin:0 0 4px">${r.record_id}</h3>
+            <div class="tiny">${r.timestamp_human_utc || ""}</div>
+            ${r.title ? `<div style="margin-top:6px">${r.title}</div>` : ""}
+            <div class="tiny" style="margin-top:8px">
+              <a href="/record/${encodeURIComponent(r.record_id)}">Verify</a>
+              ${r.permalink ? ` · <a href="${r.permalink}" target="_blank" rel="noopener">Post</a>` : ""}
+            </div>
+          </article>
+        `).join("");
+
+        $("#feed").insertAdjacentHTML("beforeend", html);
+        offset += rows.length;
+        $("#status").textContent = "";
+        if (rows.length < PAGE) { done = true; $("#loadMore").style.display = "none"; }
+      } catch (e) {
+        $("#status").textContent = `Network error: ${e.message}`;
+      } finally {
+        loading = false;
+      }
     }
-  });
-  if(!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
-  return res.json();
-}
 
-const $list = document.getElementById('list');
-
-function card(item){
-  const t = (item.title || '').trim();
-  const title = t ? t : '(no title)';
-  const url = item.permalink || '#';
-  const div = document.createElement('article');
-  div.className = 'card';
-  div.innerHTML = `
-    <div class="label">ECP</div>
-    <div class="ecp">${item.record_id}</div>
-    <div class="label" style="margin-top:8px">Timestamp (UTC)</div>
-    <div class="utc">${item.timestamp_human_utc || ''}</div>
-    <div class="label" style="margin-top:8px">Title</div>
-    <div>${title}</div>
-    <div class="row" style="margin-top:10px">
-      <a class="btn" href="${url}" target="_blank" rel="noopener">Open Post</a>
-      <a class="link" href="../ledger/?q=${encodeURIComponent(item.record_id)}" title="Verify">Verify →</a>
-    </div>
-  `;
-  return div;
-}
-
-(async ()=>{
-  try{
-    const rows = await fetchRecent(30);
-    rows.forEach(r => $list.appendChild(card(r)));
-  }catch(err){
-    console.error(err);
-    $list.innerHTML = `<div class="card">Failed to load feed.<br><small>${err.message}</small></div>`;
-  }
-})();
-</script>
+    $("#loadMore").addEventListener("click", loadPage);
+    loadPage();
+  </script>
 </body>
 </html>
