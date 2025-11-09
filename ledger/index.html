@@ -4,59 +4,246 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Load the polished theme that lives in /ledger/theme.css -->
-  <link rel="stylesheet" href="./theme.css?v=4" />
+  <meta name="theme-color" content="#0b0c10" />
+
+  <style>
+    /* ===== EchoprintOS — Glam Ledger (self-contained) ===== */
+
+    /* Tokens */
+    :root{
+      color-scheme: dark;
+      --bg:#0b0c10;
+      --panel:#11141a;
+      --stroke:#1f2530;
+      --text:#e8eaed;
+      --muted:#9aa7ba;
+
+      /* Accent gradient (mint → cyan) */
+      --a0:#20e3b2;
+      --a1:#5ee8ff;
+
+      --radius:16px;
+      --pill:9999px;
+      --h:40px;          /* unified control height */
+      --gap:14px;
+      --shadow: 0 0 0 1px rgba(255,255,255,.02), 0 12px 34px rgba(0,0,0,.35);
+      --glow: 0 0 0 1px rgba(96,255,220,.10), 0 12px 24px rgba(32,227,178,.18);
+    }
+
+    /* Base + subtle background pattern */
+    html,body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    body:before{
+      content:""; position:fixed; inset:-20vmax;
+      background:
+        radial-gradient(60vmax 60vmax at 80% -10%, rgba(32,227,178,.06), transparent 55%),
+        radial-gradient(50vmax 50vmax at -10% 110%, rgba(94,232,255,.05), transparent 55%);
+      pointer-events:none; z-index:0;
+    }
+    .wrap{ width:min(980px, 92vw); margin:0 auto; padding:22px 0 80px; position:relative; z-index:1; }
+
+    /* Type */
+    h1{
+      font-family: ui-serif, Georgia, "Times New Roman", serif;
+      font-weight:700; letter-spacing:-.01em;
+      font-size:clamp(30px, 4.6vw, 44px); margin:6px 0 10px;
+    }
+    h2{ font-weight:650; letter-spacing:-.01em; font-size:clamp(18px,2.6vw,22px); margin:0 0 8px; }
+    .lead,.muted{ color:var(--muted); }
+    .mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.92em; color:#bcd2e0; }
+
+    a{ color:#b9c6d8; text-decoration:none; }
+    a:hover{ color:var(--text); }
+
+    /* Nav — glass bar + active pill */
+    .nav{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter:saturate(1.1) blur(8px);
+      border-bottom:1px solid var(--stroke);
+      background:linear-gradient(to bottom, rgba(11,12,16,.7), rgba(11,12,16,.4));
+    }
+    .nav .row{ height:60px; display:flex; align-items:center; gap:18px; }
+    .brand{
+      display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.01em;
+      background:linear-gradient(90deg,var(--a0),var(--a1));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .brand svg{ width:22px; height:22px; flex:none; }
+    .nav a{ padding:8px 12px; border-radius:12px; transition:all .18s ease;
+            color:#c6d3e1; }
+    .nav a:hover{ background:rgba(255,255,255,.04); }
+    .nav a.active{
+      color:#051f19;
+      background:linear-gradient(90deg,var(--a0),var(--a1));
+      box-shadow:var(--glow);
+    }
+
+    /* Hero */
+    .hero{
+      margin:18px 0 10px;
+      border-radius:22px;
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--stroke);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00)),
+        radial-gradient(1200px 160px at 20% -10%, rgba(94,232,255,.06), transparent 60%),
+        radial-gradient(1200px 140px at 80% 0%, rgba(32,227,178,.06), transparent 55%),
+        var(--panel);
+      box-shadow: var(--shadow);
+      padding:22px 22px 20px;
+    }
+
+    /* Cards (glass panels) */
+    .card{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00)),
+        var(--panel);
+      border:1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      border-radius:var(--radius);
+      padding:18px;
+      margin:16px 0;
+    }
+
+    /* Controls */
+    .controls{ display:flex; flex-direction:column; gap:12px; }
+    .btnrow{ display:flex; gap:var(--gap); flex-wrap:wrap; align-items:center; }
+
+    input[type="text"], input[type="search"]{
+      height:var(--h); width:100%;
+      border-radius:12px; border:1px solid var(--stroke);
+      background:#0f1218; color:var(--text); padding:0 14px; outline:none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+      transition:border-color .15s, box-shadow .15s, transform .04s;
+    }
+    input::placeholder{ color:#7f8ba0; }
+    input:focus{
+      border-color:rgba(32,227,178,.55);
+      box-shadow:0 0 0 4px rgba(32,227,178,.15), inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+
+    .btn{
+      height:var(--h); padding:0 18px; border-radius:var(--pill);
+      border:1px solid transparent; font-weight:700; letter-spacing:.01em;
+      display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+      transition:transform .04s ease, box-shadow .18s ease, filter .15s ease;
+      user-select:none;
+    }
+    .btn:active{ transform:translateY(1px); }
+
+    .btn.primary{
+      color:#041c16;
+      background:linear-gradient(90deg,var(--a0),var(--a1));
+      box-shadow:var(--glow);
+    }
+    .btn.primary:hover{ filter:brightness(1.05); }
+    .btn.outline{ color:var(--text); background:transparent; border-color:var(--stroke); }
+    .btn.outline:hover{ border-color:#2a3240; background:rgba(255,255,255,.02); }
+    .btn.ghost{ color:var(--text); background:rgba(255,255,255,.04); border:1px solid var(--stroke); }
+    .btn.ghost:hover{ background:rgba(255,255,255,.06); }
+
+    /* Results + list */
+    .result{ display:none; margin-top:10px; padding:12px; border-radius:14px;
+             border:1px solid var(--stroke); background:#0f1218; }
+    .result.show{ display:block; }
+    .list{ list-style:none; padding:0; margin:10px 0 0; }
+    .item{ padding:12px 0; border-top:1px solid var(--stroke); }
+    .item:first-child{ border-top:0; }
+    .link{ color:var(--a1); }
+    .link:hover{ text-decoration:underline; }
+
+    /* Footer */
+    .ft{ margin:26px 0 0; color:var(--muted); font-size:13px; text-align:center; opacity:.9; }
+
+    /* Small screens */
+    @media (max-width:420px){
+      .btn{ padding:0 14px; }
+      .nav .row{ gap:12px; }
+    }
+  </style>
 </head>
 <body>
-
-  <!-- Top nav -->
-  <nav class="nav">
-    <div class="wrap row">
-      <a class="brand" href="/ledger/">EchoprintOS</a>
-      <a class="active" href="/ledger/">Ledger</a>
-      <a href="/capture/">Capture</a>
-      <a href="/about/">About</a>
+  <!-- NAV -->
+  <div class="nav">
+    <div class="wrap">
+      <div class="row">
+        <a class="brand" href="/ledger/" aria-label="EchoprintOS home">
+          <!-- tiny sprout glyph -->
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 14c0-4.5 3.5-7 8-7 0 0 2-1 3-3 2 3 3 12-6 12-1.8 0-3-.7-5 1" stroke="url(#g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#20e3b2"/><stop offset="1" stop-color="#5ee8ff"/></linearGradient></defs></svg>
+          EchoprintOS
+        </a>
+        <a class="active" href="/ledger/">Ledger</a>
+        <a href="/capture/">Capture</a>
+        <a href="/about/">About</a>
+      </div>
     </div>
-  </nav>
+  </div>
 
   <div class="wrap">
 
-    <section class="card">
+    <!-- HERO -->
+    <section class="hero">
       <h1>Proof-of-Care Ledger</h1>
       <p class="lead">Browse recent records and verify any EchoprintOS Record ID or 64-hex hash.</p>
     </section>
 
+    <!-- HOW TO -->
     <section class="card">
       <h2>How to verify</h2>
       <p>Paste an <strong>ECP</strong> (e.g., <span class="mono">ECP-20251108034124863</span>) or a
          <strong>64-hex hash</strong>, then press <em>Verify</em>.</p>
     </section>
 
-   <section class="card verify" aria-labelledby="verify-title">
-  <h2 id="verify-title">Verify</h2>
+    <!-- VERIFY -->
+    <section class="card">
+      <h2>Verify</h2>
 
-  <label for="q" class="visually-hidden">EchoprintOS Record ID or 64-hex hash</label>
-  <input id="q" class="field" type="text" inputmode="text" autocomplete="off"
-         placeholder="ECP-…  or  64-hex hash" />
+      <!-- Input on its own line; buttons underneath -->
+      <div class="controls">
+        <input id="q" type="text" inputmode="text" autocomplete="off"
+               aria-label="ECP or 64-hex hash"
+               placeholder="ECP-…  or  64-hex hash" />
+        <div class="btnrow">
+          <button id="btnVerify" class="btn primary">Verify</button>
+          <button id="btnClear"  class="btn outline">Clear</button>
+          <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
+        </div>
+      </div>
 
-  <div class="actions">
-    <button id="btnVerify" class="btn primary">Verify</button>
-    <button id="btnClear"  class="btn outline">Clear</button>
-    <button id="btnPaste"  class="btn ghost"   title="Paste from clipboard">Paste</button>
-  </div>
+      <!-- Shows only when populated -->
+      <div id="verifyResult" class="result"></div>
+    </section>
 
-  <div id="verifyResult" class="result"></div>
-</section>
-
+    <!-- RECENT -->
     <section class="card">
       <h2>Recent</h2>
       <div id="recentStatus" class="muted">Loading…</div>
       <ul id="recent" class="list"></ul>
     </section>
 
+    <div class="ft">Integrity through Care • EchoprintOS</div>
   </div>
 
-  <!-- JS for verify + recent -->
+  <!-- Your existing data/verify logic; bump version to defeat cache -->
   <script type="module" src="/ledger/js/main.hard.js?v=8"></script>
+
+  <!-- Tiny helper: only show the result box when populated (plays nice with your JS) -->
+  <script>
+    (function(){
+      const box = document.getElementById('verifyResult');
+      const set = (txt) => {
+        if (!box) return;
+        if (typeof txt === 'string' && txt.trim()) box.classList.add('show');
+        else box.classList.remove('show');
+      };
+      // Observe text changes made by your main.hard.js
+      const obs = new MutationObserver(() => set(box.textContent));
+      obs.observe(box, {childList:true, subtree:true, characterData:true});
+    }());
+  </script>
 </body>
 </html>
