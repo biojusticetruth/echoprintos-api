@@ -1,77 +1,81 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>EchoprintOS • Capture</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EchoprintOS · Ledger</title>
+  <link rel="stylesheet" href="/ledger/theme.css" />
   <style>
-    body{background:#0b0c10;color:#e8eaed;font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;margin:0}
-    .wrap{width:min(820px,92vw);margin:0 auto;padding:28px 0 80px}
-    a{color:#8ab4f8}
-    .nav{display:flex;gap:22px;padding:8px 0 18px}
-    .card{background:#121419;border:1px solid #1f232b;border-radius:18px;padding:26px}
-    h1{margin:8px 0 4px}
-    .drop{border:1px dashed #2a2f3a;border-radius:12px;padding:26px;text-align:center;color:#a7b0bc}
-    .btn{appearance:none;border:1px solid #1e2a22;background:#18d0a8;color:#04261f;border-radius:10px;height:42px;padding:0 16px;font-weight:700;cursor:pointer}
-    .ghost{background:#10141a;color:#cdd3da;border:1px solid #222834}
-    pre{background:#0f1116;border:1px solid #232a38;border-radius:12px;padding:14px;overflow:auto}
+    /* tiny helpers so this file stands alone */
+    .wrap{width:min(960px,100% - 24px);margin-inline:auto;padding:14px}
+    header.site{display:flex;align-items:center;gap:14px;margin:10px 0 16px}
+    header.site .brand{font-weight:700;letter-spacing:.2px}
+    header.site nav a{margin-right:10px;text-decoration:none}
+    header.site nav a.active{font-weight:600;text-decoration:underline}
+    .card{border:1px solid var(--border, #28303a);border-radius:12px;padding:14px;background:var(--card,#0f1318)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    input{flex:1 1 280px}
+    .tiny{font-size:.85rem;opacity:.85}
+    .muted{opacity:.75}
+    code{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .list{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:760px){ .list{grid-template-columns:1fr 1fr} }
+    .item{border:1px solid var(--border, #28303a);border-radius:12px;padding:12px;background:var(--card,#0f1318)}
     .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .btn{padding:10px 12px;border-radius:10px;border:0;background:#1f6feb;color:#fff}
+    .btn.ghost{background:#2b2f36;color:#e8eaed}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="nav"><a href="/">← Ledger</a> <span style="opacity:.6">Capture</span></div>
-    <div class="card">
-      <h1>Capture</h1>
-      <p>Drop a file or pick one. We’ll compute a <b>SHA-256</b> (64-hex) locally.</p>
+    <header class="site">
+      <div class="brand">EchoprintOS</div>
+      <nav aria-label="Primary">
+        <a href="/"           >Home</a>
+        <a href="/ledger/"    class="active">Ledger</a>
+        <a href="/ledger/capture.html">Capture</a>
+        <a href="/ledger/about.html">About</a>
+      </nav>
+    </header>
 
-      <div class="drop" id="drop">
-        <input id="file" type="file" style="display:none">
-        <button class="btn ghost" onclick="document.getElementById('file').click()">Choose file…</button>
-        <div id="picked" style="margin-top:8px;opacity:.8">No file selected.</div>
-      </div>
+    <!-- Intro (Ledger) -->
+    <section class="card" style="margin-bottom:1rem">
+      <h1 style="margin:.25rem 0 .5rem 0">Proof-of-Care Ledger</h1>
+      <p class="tiny muted" style="margin:0">
+        Browse recent records and verify any EchoprintOS Record ID or 64-hex hash.
+      </p>
+    </section>
 
-      <div id="out" style="margin-top:18px;display:none">
-        <div><b>Hash</b></div>
-        <div class="mono" id="hash" style="margin:6px 0 10px"></div>
-        <div class="mono" id="ecp"></div>
-        <div style="display:flex;gap:10px;margin-top:12px">
-          <button class="btn" onclick="copy('#hash')">Copy hash</button>
-          <button class="btn ghost" onclick="copy('#json')">Copy JSON</button>
-        </div>
-        <div style="margin-top:14px"><b>Payload</b></div>
-        <pre id="json" class="mono">{}</pre>
+    <!-- Directions (clean, not orange) -->
+    <section class="card" style="margin-bottom:1rem">
+      <h2 style="margin:0 0 .25rem 0">How to verify</h2>
+      <p class="tiny muted" style="margin:0">
+        Paste an <strong>ECP</strong> (e.g., <code>ECP-20251108034124863</code>) or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
+      </p>
+    </section>
+
+    <!-- Verify -->
+    <section id="verifySection" class="card">
+      <h2>Verify</h2>
+      <div class="row">
+        <input id="q" type="text" inputmode="text" autocomplete="off"
+               placeholder="" aria-label="ECP or 64-hex hash" />
+        <button id="btnVerify" class="btn">Verify</button>
+        <button id="btnClear"  class="btn ghost">Clear</button>
       </div>
-    </div>
+      <div id="verifyResult" class="tiny" style="margin-top:.5rem"></div>
+    </section>
+
+    <!-- Recent -->
+    <section class="card">
+      <h2>Recent</h2>
+      <div id="recentStatus" class="tiny muted">Loading…</div>
+      <div id="recent" class="list"></div>
+    </section>
   </div>
 
-<script>
-const $ = s=>document.querySelector(s);
-const fileEl = $('#file');
-fileEl.addEventListener('change', handle);
-
-async function handle(){
-  const f = fileEl.files[0];
-  if(!f){ $('#picked').textContent='No file selected.'; return; }
-  $('#picked').textContent = `${f.name} (${(f.size/1024).toFixed(1)} KB)`;
-  const buf = await f.arrayBuffer();
-  const hashHex = await sha256hex(buf);
-  const ts = new Date().toISOString();
-  const ecp = 'ECP-' + ts.replace(/\D/g,'').slice(0,14); // simple client ECP
-  $('#hash').textContent = hashHex;
-  $('#ecp').textContent  = `Record ID: ${ecp}`;
-  $('#json').textContent = JSON.stringify({ record_id: ecp, title: f.name, hash: hashHex, timestamp_iso: ts }, null, 2);
-  $('#out').style.display='block';
-}
-async function sha256hex(buf){
-  const h = await crypto.subtle.digest('SHA-256', buf);
-  const bytes = Array.from(new Uint8Array(h));
-  return bytes.map(b => b.toString(16).padStart(2,'0')).join('');
-}
-async function copy(sel){
-  const t = $(sel).textContent;
-  try{ await navigator.clipboard.writeText(t); }catch{}
-}
-</script>
+  <!-- keep your existing scripts / endpoints -->
+  <script src="/ledger/env.js"></script>
+  <script type="module" src="/ledger/app.js"></script>
 </body>
 </html>
