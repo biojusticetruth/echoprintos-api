@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS · Feed</title>
+  <style>
+    :root{--bg:#FBFBF7;--ink:#0E1B16;--muted:#5C6B73;--panel:#fff;--border:#E7ECF0;--accent:#1CC467;--radius:16px}
+    html,body{background:var(--bg);color:var(--ink);margin:0}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    main{max-width:980px;margin:48px auto;padding:0 16px}
+    h1{font-size:40px;margin:0 0 8px}
+    p.lede{color:var(--muted);margin:0 0 24px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px}
+    .label{font-size:12px;color:var(--muted);letter-spacing:.02em}
+    .ecp{font-weight:700}
+    .utc{color:var(--muted)}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .btn{display:inline-block;padding:.4rem .7rem;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin:12px 0 18px}
+    a.link{color:#0c5c35;text-decoration:none}
+  </style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <h1>Recent Echoprints</h1>
+    <div>
+      <a class="link" href="./capture.html">+ Capture</a>
+    </div>
+  </div>
+  <p class="lede">Public ledger view (no hashes). Click a card’s link to open the original post.</p>
+
+  <div id="list" class="grid"></div>
+</main>
+
+<script>
+/* ─── CONFIG: replace these two values ───────────────────────────────────── */
+const SUPABASE_URL  = 'https://YOUR-PROJECT.supabase.co';  // ← change
+const SUPABASE_ANON = 'YOUR-ANON-KEY';                      // ← change
+/* We read from a public view that hides the hash. Adjust the view name and
+   column names if yours differ. These columns are expected:
+   record_id, title, permalink, timestamp_human_utc, timestamp_iso
+*/
+const VIEW = 'v_echoprints_public';
+
+async function fetchRecent(limit=24){
+  const qs = new URLSearchParams({
+    select: 'record_id,title,permalink,timestamp_human_utc,timestamp_iso',
+    order: 'timestamp_iso.desc',
+    limit: String(limit)
+  });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${VIEW}?${qs}`,{
+    headers:{
+      'apikey': SUPABASE_ANON,
+      'Authorization': `Bearer ${SUPABASE_ANON}`
+    }
+  });
+  if(!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+  return res.json();
+}
+
+const $list = document.getElementById('list');
+
+function card(item){
+  const t = (item.title || '').trim();
+  const title = t ? t : '(no title)';
+  const url = item.permalink || '#';
+  const div = document.createElement('article');
+  div.className = 'card';
+  div.innerHTML = `
+    <div class="label">ECP</div>
+    <div class="ecp">${item.record_id}</div>
+    <div class="label" style="margin-top:8px">Timestamp (UTC)</div>
+    <div class="utc">${item.timestamp_human_utc || ''}</div>
+    <div class="label" style="margin-top:8px">Title</div>
+    <div>${title}</div>
+    <div class="row" style="margin-top:10px">
+      <a class="btn" href="${url}" target="_blank" rel="noopener">Open Post</a>
+      <a class="link" href="../ledger/?q=${encodeURIComponent(item.record_id)}" title="Verify">Verify →</a>
+    </div>
+  `;
+  return div;
+}
+
+(async ()=>{
+  try{
+    const rows = await fetchRecent(30);
+    rows.forEach(r => $list.appendChild(card(r)));
+  }catch(err){
+    console.error(err);
+    $list.innerHTML = `<div class="card">Failed to load feed.<br><small>${err.message}</small></div>`;
+  }
+})();
+</script>
+</body>
+</html>
