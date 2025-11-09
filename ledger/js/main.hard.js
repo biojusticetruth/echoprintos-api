@@ -40,13 +40,50 @@ function fmtItem(r) {
   return lines.join("\n");
 }
 
-async function sbGet(pathAndQuery) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${pathAndQuery}`, { headers });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Supabase ${res.status}: ${text || res.statusText}`);
+async function loadRecent() {
+  recentStatus.textContent = "Loading…";
+  recentWrap.innerHTML = "";
+
+  try {
+    // ask for several possible time fields; the view will just return the ones it has
+    const cols = "record_id,title,hash,timestamp_iso,created_at,captured_at,permalink,url";
+    const rec  = await sbGet(`${VIEW}?select=${cols}&limit=30`);
+
+    if (!rec.length) {
+      recentStatus.textContent = "No records yet.";
+      return;
+    }
+
+    // client-side sort by best available timestamp
+    rec.sort((a, b) => {
+      const ts = (r) => Date.parse(r.timestamp_iso || r.created_at || r.captured_at || 0);
+      return ts(b) - ts(a);
+    });
+
+    recentStatus.textContent = "";
+    const frag = document.createDocumentFragment();
+
+    rec.forEach((r) => {
+      const li = document.createElement("li");
+      li.className = "item";
+      const time  = (r.timestamp_iso || r.created_at || r.captured_at || "").toString();
+      const title = (r.title || "(untitled)").toString();
+      const ecp   = (r.record_id || "").toString();
+      const link  = (r.permalink || r.url || "").toString();
+
+      li.innerHTML = `
+        <div><strong>${title}</strong></div>
+        <div class="muted">${time}</div>
+        <div class="mono">${ecp}${r.hash ? " • " + (r.hash.slice(0,8)+"…"+r.hash.slice(-8)) : ""}</div>
+        ${link ? `<div><a class="link" href="${link}" target="_blank" rel="noopener">Source</a></div>` : ""}
+      `;
+      frag.appendChild(li);
+    });
+
+    recentWrap.appendChild(frag);
+  } catch (err) {
+    recentStatus.textContent = `Error loading recent: ${err.message}`;
   }
-  return res.json();
 }
 
 // ---- Verify -------------------------------------------------
