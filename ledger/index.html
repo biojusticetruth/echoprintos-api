@@ -4,18 +4,17 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Optional headline font (theme also loads serif fallbacks) -->
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@600;700&display=swap" rel="stylesheet">
-  <!-- Make sure this is LAST so it overrides anything above -->
-  <link rel="stylesheet" href="/theme.css?v=18">
+
+  <!-- Single theme file for this folder -->
+  <link rel="stylesheet" href="./theme.css?v=20" />
 </head>
 <body>
 
-  <!-- Top Nav (glassified by theme) -->
+  <!-- Top Nav (glass) -->
   <header class="nav">
     <div class="wrap">
       <div class="row">
-        <a class="brand" href="/ledger/">EchoprintOS</a>
+        <a class="brand" href="/">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
         <a href="/capture/">Capture</a>
         <a href="/about/">About</a>
@@ -24,40 +23,38 @@
   </header>
 
   <main class="wrap">
-
-    <!-- Hero card: glass + shimmer + subtle edge -->
-    <section class="card glass edge sheen glow-corners">
+    <!-- Hero glass card with shimmer -->
+    <section class="card glass edge glow-corners sheen">
       <span class="pill">LEDGER</span>
       <h1 class="display">Proof-of-Care Ledger</h1>
       <p class="lead">Check or confirm authenticity.</p>
     </section>
 
-    <!-- Verify (stacked on mobile, inline on wide screens) -->
-    <section class="card glass edge sheen">
+    <!-- Verify (glass, stacked on mobile) -->
+    <section class="card glass sheen">
       <h2>Verify</h2>
+
       <div class="verify-row">
         <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="ECP-…  or  64-hex hash">
+               placeholder="ECP-…  or  64-hex hash" />
         <button id="btnVerify" class="btn primary">Verify</button>
         <button id="btnClear"  class="btn outline">Clear</button>
-        <button id="btnPaste"  class="btn ghost"   title="Paste from clipboard">Paste</button>
+        <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
       </div>
+
       <div id="verifyResult" class="result"></div>
-      <p class="muted" style="margin-top:10px">
-        Tip: Paste an <span class="mono">ECP-…</span> or 64-hex hash, then press <em>Verify</em> (or hit ↵).
-      </p>
+      <p class="tip">Tip: Paste an <span class="mono">ECP-…</span> or 64-hex hash, then press <em>Verify</em> (or hit ↵).</p>
     </section>
 
-    <!-- Recent list -->
-    <section class="card glass edge">
+    <!-- Recent (glass) -->
+    <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
       <ul id="recent" class="list"></ul>
     </section>
-
   </main>
 
-  <!-- Keep your existing JS; bump the version to bust cache -->
-  <script type="module" src="/ledger/js/main.hard.js?v=8"></script>
+  <!-- Your existing JS (unchanged). Cache-bust if you just edited it. -->
+  <script type="module" src="/ledger/js/main.hard.js?v=20"></script>
 </body>
 </html>
