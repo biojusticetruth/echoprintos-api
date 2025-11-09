@@ -3,121 +3,62 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>About • EchoprintOS Ledger</title>
-  <link rel="stylesheet" href="/ledger/css/base.css" />
-  <link rel="icon" href="/ledger/favicon.ico" />
+  <title>About — EchoprintOS</title>
+  <style>
+    :root{--bg:#0e1217;--card:#141a21;--ink:#e7edf3;--muted:#9aa6b2;--accent:#1cc467;--ring:#253140}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Inter,Roboto}
+    a{color:#8ad5ff;text-decoration:none} a:hover{text-decoration:underline}
+    .wrap{max-width:960px;margin:auto;padding:20px}
+    header{position:sticky;top:0;background:rgba(14,18,23,.75);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--ring);z-index:2}
+    .nav{display:flex;align-items:center;gap:28px;padding:14px 20px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .sprout{width:16px;height:16px;background:var(--accent);border-radius:3px;box-shadow:0 0 12px rgba(28,196,103,.6)}
+    .nav a{color:var(--muted)} .nav a.active{color:var(--accent);font-weight:600}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:22px;margin:18px 0}
+    h1{font-size:40px;margin:0 0 10px} h2{margin:18px 0 8px}
+    .muted{color:var(--muted)} footer{color:var(--muted);padding:30px 0}
+    ul{margin:8px 0 0 20px}
+  </style>
 </head>
 <body>
-
-  <!-- Header / Nav -->
-  <header class="site-header">
+  <header>
     <div class="wrap">
-      <a class="brand" href="/ledger/">Echoprint<span class="brand-accent">OS</span></a>
-      <nav class="site-nav">
-        <a href="/ledger/">Verify</a>
-        <a href="/ledger/capture.html">Capture</a>
-        <a class="active" href="/ledger/about.html">About</a>
+      <nav class="nav">
+        <div class="brand"><span class="sprout"></span> EchoprintOS</div>
+        <a href="/">Ledger</a>
+        <a href="/capture/">Capture</a>
+        <a class="active" href="/about/">About</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap" style="margin-top:18px">
+  <main class="wrap">
+    <section class="card">
+      <h1>About EchoprintOS</h1>
+      <p class="muted">A lightweight, public-verifiable timestamping layer for posts and artifacts. Each entry receives an <strong>ECP</strong> (Echoprint Code + UTC time) and a hidden SHA-256 hash for integrity.</p>
 
-    <!-- Intro -->
-    <section class="panel">
-      <h1 style="margin:0 0 .25rem">About EchoprintOS</h1>
-      <p class="muted" style="margin:.25rem 0 0">
-        A lightweight, public timestamping layer for posts, images, and documents—designed to be read by humans, verified by machines, and trusted in court.
-      </p>
-    </section>
-
-    <!-- What it is -->
-    <section class="panel">
-      <h2>What it is</h2>
+      <h2>What you can do</h2>
       <ul>
-        <li><strong>ECP ID</strong> — a human-readable Echoprint code (e.g., <span class="mono">ECP-20251108105702814</span>).</li>
-        <li><strong>SHA-256 hash</strong> — a 64-hex fingerprint of the exact text or file bytes.</li>
-        <li><strong>Timestamp (UTC)</strong> — when the record was echoprinted; formatted consistently for readability.</li>
-        <li><strong>Optional links</strong> — a permalink to the original post and/or a media URL (image/file).</li>
+        <li>Verify by <strong>ECP</strong> (e.g., <code>ECP-YYYYMMDDHHMMSSmmm</code>) or by 64-hex hash.</li>
+        <li>Browse the recent ledger and open a record permalink.</li>
+        <li>Optionally link to the original post (X, LinkedIn, Substack, etc.).</li>
+      </ul>
+
+      <h2>Privacy & Integrity</h2>
+      <ul>
+        <li>Public view exposes only: ECP, timestamp, title (optional), permalink (optional), and the content hash.</li>
+        <li>Writes are controlled; reads happen through a restricted SQL view.</li>
+      </ul>
+
+      <h2>Roadmap</h2>
+      <ul>
+        <li>Capture form → Make.com automations.</li>
+        <li>Record detail pages with share cards.</li>
+        <li>Independent audit & export tools.</li>
       </ul>
     </section>
-
-    <!-- How it works -->
-    <section class="panel">
-      <h2>How it works</h2>
-      <ol>
-        <li><strong>Capture</strong> — For text, we hash the exact string. For files, we hash the exact bytes.</li>
-        <li><strong>Echoprint</strong> — We create a record: <span class="mono">ECP ID</span>, <span class="mono">hash</span>, and <span class="mono">timestamp (UTC)</span>.</li>
-        <li><strong>Verify</strong> — Anyone can paste an ECP or hash into <a href="/ledger/">Verify</a> and compare against the ledger entry.</li>
-      </ol>
-      <p class="muted tiny" style="margin-top:.35rem">
-        Bitcoin anchoring (OpenTimestamps) is supported in the broader stack and can be exposed here when you’re ready.
-      </p>
-    </section>
-
-    <!-- What shows in the public feed -->
-    <section class="panel">
-      <h2>Public feed policy (what you see)</h2>
-      <ul>
-        <li><strong>Shows:</strong> ECP ID, UTC timestamp, title, and (when available) a link to source.</li>
-        <li><strong>Hidden on cards:</strong> the raw hash (to reduce visual clutter) — still visible in the Verify view and in the downloadable certificate/JSON.</li>
-      </ul>
-    </section>
-
-    <!-- FAQ -->
-    <section class="panel">
-      <h2>FAQ</h2>
-
-      <details>
-        <summary><strong>What is an ECP ID?</strong></summary>
-        <p class="muted">
-          A human-friendly identifier (e.g., <span class="mono">ECP-YYYYMMDDHHMMSSmmm</span>) that lets people reference a record without copying a 64-character hash.
-        </p>
-      </details>
-
-      <details>
-        <summary><strong>Is the SHA-256 hash private?</strong></summary>
-        <p class="muted">
-          No — a hash is a one-way fingerprint. It proves integrity (that content hasn’t changed) but does not reveal the content itself.
-        </p>
-      </details>
-
-      <details>
-        <summary><strong>Where do timestamps come from?</strong></summary>
-        <p class="muted">
-          The ledger stores an authoritative UTC timestamp at the moment of echoprinting. For Bitcoin anchoring, a proof (receipt) can be attached.
-        </p>
-      </details>
-
-      <details>
-        <summary><strong>Can I verify by hash or by ECP?</strong></summary>
-        <p class="muted">
-          Yes — the <a href="/ledger/">Verify</a> tool accepts either a full 64-hex SHA-256 hash or an ECP ID.
-        </p>
-      </details>
-    </section>
-
-    <!-- Contact / attribution -->
-    <section class="panel">
-      <h2>Contact</h2>
-      <p class="muted">
-        Built for BioJustice-grade integrity. For questions or feature requests, contact the site owner.
-      </p>
-    </section>
-
-    <footer class="site-footer tiny muted" style="margin:20px 0 40px">
-      <div class="wrap">
-        © <span id="year"></span> EchoprintOS • Public verification ledger
-      </div>
-    </footer>
   </main>
 
-  <!-- Scripts (order matters) -->
-  <script>
-    // keep footer year current without pulling in main.js
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
-  <script src="/ledger/env.js"></script>
-  <script type="module" src="/ledger/js/main.js"></script>
+  <footer class="wrap">© EchoprintOS</footer>
 </body>
 </html>
