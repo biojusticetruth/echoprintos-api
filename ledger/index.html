@@ -1,6 +1,61 @@
 <!doctype html>
 <html lang="en">
+<head><!doctype html>
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS — Ledger</title>
+  <link rel="stylesheet" href="./theme.css" />
+</head>
+<body>
+
+  <!-- shared header -->
+  <header class="site-nav">
+    <a class="brand" href="/ledger/"><span class="sprout">🌱</span> EchoprintOS</a>
+    <nav>
+      <a href="/ledger/capture.html">Capture</a>
+      <a href="/ledger/">Ledger</a>
+      <a href="/ledger/about.html">About</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <!-- hero -->
+    <section class="card hero">
+      <h1 class="title">EchoprintOS</h1>
+      <p class="blurb">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</p>
+    </section>
+
+    <!-- VERIFY -->
+    <section id="verifySection" class="card">
+      <h2>Verify</h2>
+      <div class="row" style="margin:8px 0 10px">
+        <input id="q" type="text" placeholder="ECP-YYYYMMDDHHMMSSmmm or 64-hex hash" class="mono" />
+        <button id="btnVerify" class="btn btn-primary">Verify</button>
+        <button id="btnClear" class="btn btn-ghost">Clear</button>
+      </div>
+      <div id="verifyResult" class="mono tiny"></div>
+      <div class="tiny" style="margin-top:8px;color:#ffbf66">
+        Enter an ECP (ECP-YYYY…) or a 64-hex hash.
+      </div>
+    </section>
+
+    <!-- RECENT -->
+    <section class="card">
+      <h2>Recent</h2>
+      <div id="recentStatus" class="tiny">Loading…</div>
+      <div id="recent"></div>
+    </section>
+  </main>
+
+    <!-- …all of your page’s HTML… -->
+
+  <!-- Scripts (order matters) -->
+  <script src="./env.js"></script>
+  <script type="module" src="./index.html"></script>
+</body>
+</html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EchoprintOS — Ledger</title>
