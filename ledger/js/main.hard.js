@@ -22,7 +22,7 @@ async function verify(q){
 
   try {
     const params = new URLSearchParams({
-      select: "record_id,hash,title,permalink,timestamp_human_utc,timestamp_iso,url",
+      select: "record_id,hash,title,permalink,timestamp_human_utc,timestamp_iso",
       limit: "1",
       order: "timestamp_iso.desc"
     });
@@ -43,18 +43,18 @@ async function verify(q){
     const r = rows[0];
     const human = r.timestamp_human_utc || (r.timestamp_iso ? new Date(r.timestamp_iso).toISOString().replace('T',' ').replace('Z',' UTC') : '—');
     const linkVerify = `?q=${encodeURIComponent(r.record_id)}#verify`;
-    const linkPost = r.permalink || r.url || null;
+    const linkPost = r.permalink || null; // 🔧 no 'url' fallback
 
     out.innerHTML = `
-      <div class="mono pill" style="display:inline-block;margin:0 0 6px 0">${r.record_id}</div>
+      <div class="mono" style="display:inline-block;padding:2px 8px;border:1px solid #2b3038;border-radius:999px;background:#0d1117;color:#8ab4f8;font-weight:600;letter-spacing:.2px;margin:0 0 6px 0">${r.record_id}</div>
       <div class="tiny">Timestamp (UTC): <span class="mono">${human}</span></div>
       ${r.hash ? `
-      <div class="tiny hashline">
+      <div class="tiny" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span>SHA-256:</span>
-        <span class="mono truncate" title="${r.hash}">${clipHash(r.hash)}</span>
+        <span class="mono" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.hash}">${clipHash(r.hash)}</span>
         <button class="btn small ghost" id="copyHash">Copy</button>
       </div>` : ""}
-      <div class="tiny rowline">
+      <div class="tiny" style="margin-top:.35rem">
         <a href="${linkVerify}">Permalink</a>
         ${linkPost ? ` · <a href="${linkPost}" target="_blank" rel="noopener">Source</a>` : ""}
       </div>
@@ -75,7 +75,6 @@ if (qp.get("q")) {
   const q = qp.get("q");
   box.value = q;
   verify(q);
-  // focus the Verify section if present
   document.getElementById("verifySection")?.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
@@ -87,7 +86,7 @@ async function loadRecent(){
   if (!recent) return;
   try {
     const params = new URLSearchParams({
-      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso,url",
+      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso",
       order: "timestamp_iso.desc",
       limit: "12"
     });
@@ -106,13 +105,13 @@ async function loadRecent(){
     recent.innerHTML = rows.map(r=>{
       const human = r.timestamp_human_utc || (r.timestamp_iso ? new Date(r.timestamp_iso).toISOString().replace('T',' ').replace('Z',' UTC') : '');
       const linkVerify = `?q=${encodeURIComponent(r.record_id)}#verify`;
-      const linkPost = r.permalink || r.url || null;
+      const linkPost = r.permalink || null; // 🔧 no 'url' fallback
       return `
         <article class="item">
           ${r.title ? `<h4>${escapeHtml(r.title)}</h4>` : `<h4>(untitled)</h4>`}
-          <div class="mono pill" style="margin:6px 0 4px 0">${r.record_id}</div>
+          <div class="mono" style="display:inline-block;padding:2px 8px;border:1px solid #2b3038;border-radius:999px;background:#0d1117;color:#8ab4f8;font-weight:600;letter-spacing:.2px;margin:6px 0 4px 0">${r.record_id}</div>
           <div class="tiny muted">${human}</div>
-          <div class="tiny rowline">
+          <div class="tiny" style="margin-top:.35rem">
             <a href="${linkVerify}">Verify</a>
             ${linkPost ? ` · <a href="${linkPost}" target="_blank" rel="noopener">Post</a>` : ""}
           </div>
