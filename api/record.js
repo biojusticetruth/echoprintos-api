@@ -1,60 +1,79 @@
-// /api/record.js — strict, no-bearer
-const { createClient } = require('@supabase/supabase-js');
+// /api/record.js
+// Inserts a new Echoprint row into Supabase (server-side, secure).
 
-const norm = s => (s || '').trim();
-const parseBody = req => {
-  try { return typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {}); }
-  catch { return {}; }
-};
+export default async function handler(req, res) {
+  // --- CORS (optional; useful if you call from other origins) ---
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    return res.status(204).end();
+  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
-module.exports = async function handler(req, res) {
+  // --- Only POST is allowed here ---
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Use POST' });
+  }
+
+  // --- Simple shared-secret gate ---
+  const secret = req.headers['x-auth-token'];
+  if (!secret || secret !== process.env.WEBHOOK_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // --- Required envs (configured in Vercel → Settings → Environment Variables) ---
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
+  }
+
+  // --- Parse payload (accepts Make/Buffer-style fields) ---
+  const {
+    record_id,          // required (your ECP-... id)
+    title = null,
+    hash = null,
+    url = null,         // optional source url
+    permalink = null,   // optional canonical link
+    platform = null,    // optional: "twitter", "instagram", etc.
+    sent_at = null      // optional ISO datetime string
+  } = (req.body || {});
+
+  if (!record_id) {
+    return res.status(400).json({ error: 'record_id required' });
+  }
+
+  // Choose the canonical link to store
+  const link = permalink || url || null;
+
   try {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    // REST insert with service-role (bypasses RLS safely on server)
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/echoprints`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        record_id,
+        title,
+        hash,
+        permalink: link,
+        platform,
+        sent_at
+      })
+    });
 
-    // Auth: X-API-Key header OR ?key=
-    const headerKey = norm(req.headers['x-api-key']);
-    let queryKey = '';
-    try { queryKey = norm(new URL(req.url, 'http://localhost').searchParams.get('key') || ''); } catch {}
-    const token = headerKey || queryKey;
-    const expected = norm(process.env.ECHOPRINTS_API_KEY);
-    if (!expected || !token || token !== expected) return res.status(401).json({ error: 'Unauthorized' });
-
-    // Body
-    const b = parseBody(req);
-    const payload = {
-      text: b.text ?? null,
-      link: b.link ?? null,
-      perma_link: b.perma_link ?? null,
-      url: b.url ?? null,
-      platform: b.platform ?? null,
-      handle: b.handle ?? null,
-      sent_at: b.sent_at ? new Date(b.sent_at) : null,
-      scheduled_at: b.scheduled_at ? new Date(b.scheduled_at) : null,
-      source: b.source ?? 'make',
-      raw: b
-    };
-    if (!payload.text || !(payload.perma_link || payload.url)) {
-      return res.status(400).json({ error: 'Missing: text and perma_link (or url)' });
+    const data = await resp.json();
+    if (!resp.ok) {
+      return res.status(resp.status).json({ error: data });
     }
 
-    // Supabase
-    const SUPABASE_URL = norm(process.env.SUPABASE_URL);
-    const SERVICE_KEY  = norm(process.env.SUPABASE_SERVICE_ROLE_KEY);
-    if (!SUPABASE_URL || !SERVICE_KEY) return res.status(500).json({ error: 'Supabase env missing' });
-
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-
-    // Upsert
-    const { data, error } = await supabase
-      .from('echoprints')
-      .upsert(payload, { onConflict: 'perma_link' })
-      .select()
-      .limit(1);
-
-    if (error) return res.status(500).json({ error: 'Supabase upsert failed', detail: error.message });
-
-    return res.status(200).json({ ok: true, record: data?.[0] ?? null });
-  } catch (e) {
-    return res.status(500).json({ error: 'Handler crashed', detail: e?.message || String(e) });
+    // Return the inserted row (first element)
+    return res.status(200).json({ ok: true, row: Array.isArray(data) ? data[0] : data });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
   }
-};
+}
