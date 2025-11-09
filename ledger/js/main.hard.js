@@ -1,109 +1,127 @@
 /* ========= SUPABASE (HARDCODE — replace these 2 strings) ========= */
 const SUPABASE_URL = "https://cyndhzyfaffprdebclnw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c"
 
-/* ========= tiny helpers ========= */
+/* ========= helpers ========= */
 const $ = (sel) => document.querySelector(sel);
 const withTimeout = (p, ms=12000) =>
   Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Request timeout")), ms))]);
 
-/* Accepts ECP-… (hyphen) or ECP–… (en dash) with long numeric tail */
 function isECP(s){ return /^ECP[-\u2013\u2014]?\d{10,}$/.test(String(s||"").trim()); }
 function isHex64(s){ return /^[0-9a-f]{64}$/i.test(String(s||"").trim()); }
+function clipHash(h){ if(!h) return ""; return h.length>24 ? `${h.slice(0,10)}…${h.slice(-10)}` : h; }
+async function copy(text){ try{ await navigator.clipboard.writeText(text); }catch{} }
 
 /* ========= VERIFY ========= */
-const verifyBox = $("#q");
-const verifyOut = $("#verifyResult");
-const btnVerify = $("#btnVerify");
-const btnClear  = $("#btnClear");
+const box = $("#q");
+const out = $("#verifyResult");
 
 async function verify(q){
-  if (!verifyOut) return;
-  // Keep it silent unless valid input
-  if (!q || (!isECP(q) && !isHex64(q))) { verifyOut.innerHTML = ""; return; }
+  if (!out) return;
+  if (!q || (!isECP(q) && !isHex64(q))) { out.innerHTML = ""; return; }
 
   try {
     const params = new URLSearchParams({
-      select: "record_id,hash,title,permalink,timestamp_human_utc,timestamp_iso",
+      select: "record_id,hash,title,permalink,timestamp_human_utc,timestamp_iso,url",
       limit: "1",
       order: "timestamp_iso.desc"
     });
-    // Proper OR filter for record_id or hash
     params.append("or", `(record_id.eq.${q},hash.eq.${q})`);
 
     const res = await withTimeout(fetch(
-      `${SUPABASE_URL}/rest/v1/v_echoprints_public?${params.toString()}`,
-      { headers: {
+      `${SUPABASE_URL}/rest/v1/v_echoprints_public?${params}`,
+      { headers:{
           "Content-Type":"application/json",
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
         }}
     ));
-    if (!res.ok) { verifyOut.innerHTML = ""; return; }
-
+    if (!res.ok) { out.innerHTML = ""; return; }
     const rows = await res.json();
-    if (!rows.length) { verifyOut.innerHTML = ""; return; }
+    if (!rows.length) { out.innerHTML = ""; return; }
 
     const r = rows[0];
-    const link = `/record/${encodeURIComponent(r.record_id)}`;
-    // Minimal, only when we actually have a match
-    verifyOut.innerHTML = `
-      <div class="mono" style="margin:.25rem 0">${r.record_id}</div>
-      <div class="tiny">Timestamp (UTC): <span class="mono">${r.timestamp_human_utc||"—"}</span></div>
-      ${r.hash ? `<div class="tiny">SHA-256: <span class="mono">${r.hash}</span></div>` : ""}
-      ${r.permalink ? `<div class="tiny">Source: <a href="${r.permalink}" target="_blank" rel="noopener">Open</a></div>` : ""}
-      <div class="tiny" style="margin-top:.35rem"><a href="${link}">Permalink</a></div>
+    const human = r.timestamp_human_utc || (r.timestamp_iso ? new Date(r.timestamp_iso).toISOString().replace('T',' ').replace('Z',' UTC') : '—');
+    const linkVerify = `?q=${encodeURIComponent(r.record_id)}#verify`;
+    const linkPost = r.permalink || r.url || null;
+
+    out.innerHTML = `
+      <div class="mono pill" style="display:inline-block;margin:0 0 6px 0">${r.record_id}</div>
+      <div class="tiny">Timestamp (UTC): <span class="mono">${human}</span></div>
+      ${r.hash ? `
+      <div class="tiny hashline">
+        <span>SHA-256:</span>
+        <span class="mono truncate" title="${r.hash}">${clipHash(r.hash)}</span>
+        <button class="btn small ghost" id="copyHash">Copy</button>
+      </div>` : ""}
+      <div class="tiny rowline">
+        <a href="${linkVerify}">Permalink</a>
+        ${linkPost ? ` · <a href="${linkPost}" target="_blank" rel="noopener">Source</a>` : ""}
+      </div>
     `;
+
+    $("#copyHash")?.addEventListener("click", ()=>copy(r.hash));
   } catch {
-    verifyOut.innerHTML = "";
+    out.innerHTML = "";
   }
 }
 
-btnVerify?.addEventListener("click", () => verify(verifyBox.value.trim()));
-btnClear?.addEventListener("click", () => { verifyBox.value=""; verifyOut.innerHTML=""; });
+$("#btnVerify")?.addEventListener("click", ()=>verify(box.value.trim()));
+$("#btnClear") ?.addEventListener("click", ()=>{ box.value=""; out.innerHTML=""; });
 
-// **Do NOT** prefill the input from URL — keep it empty and calm.
+/* allow deep-link: ?q=ECP-…#verify */
+const qp = new URLSearchParams(location.search);
+if (qp.get("q")) {
+  const q = qp.get("q");
+  box.value = q;
+  verify(q);
+  // focus the Verify section if present
+  document.getElementById("verifySection")?.scrollIntoView({behavior:"smooth", block:"start"});
+}
 
-/* ========= RECENT FEED ========= */
+/* ========= RECENT ========= */
 const recentStatus = $("#recentStatus");
-const recentList   = $("#recent");
+const recent = $("#recent");
 
 async function loadRecent(){
-  if (!recentList) return;
-
+  if (!recent) return;
   try {
     const params = new URLSearchParams({
-      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso",
+      select: "record_id,title,permalink,timestamp_human_utc,timestamp_iso,url",
       order: "timestamp_iso.desc",
       limit: "12"
     });
     const res = await withTimeout(fetch(
-      `${SUPABASE_URL}/rest/v1/v_echoprints_public?${params.toString()}`,
-      { headers: {
+      `${SUPABASE_URL}/rest/v1/v_echoprints_public?${params}`,
+      { headers:{
           "Content-Type":"application/json",
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
         }}
     ));
     if (!res.ok) { recentStatus.textContent = await res.text(); return; }
-
     const rows = await res.json();
     if (!rows.length) { recentStatus.textContent = "No records yet."; return; }
 
-    recentList.innerHTML = rows.map(r => `
-      <article class="item">
-        <h4 class="mono" style="margin:0 0 2px 0">${r.record_id}</h4>
-        <div class="tiny muted">${r.timestamp_human_utc || ""}</div>
-        ${r.title ? `<div style="margin-top:6px">${r.title}</div>` : ""}
-        <div class="tiny" style="margin-top:.35rem">
-          <a href="/record/${encodeURIComponent(r.record_id)}">Verify</a>
-          ${r.permalink ? ` · <a href="${r.permalink}" target="_blank" rel="noopener">Post</a>` : ""}
-        </div>
-      </article>
-    `).join("");
+    recent.innerHTML = rows.map(r=>{
+      const human = r.timestamp_human_utc || (r.timestamp_iso ? new Date(r.timestamp_iso).toISOString().replace('T',' ').replace('Z',' UTC') : '');
+      const linkVerify = `?q=${encodeURIComponent(r.record_id)}#verify`;
+      const linkPost = r.permalink || r.url || null;
+      return `
+        <article class="item">
+          ${r.title ? `<h4>${escapeHtml(r.title)}</h4>` : `<h4>(untitled)</h4>`}
+          <div class="mono pill" style="margin:6px 0 4px 0">${r.record_id}</div>
+          <div class="tiny muted">${human}</div>
+          <div class="tiny rowline">
+            <a href="${linkVerify}">Verify</a>
+            ${linkPost ? ` · <a href="${linkPost}" target="_blank" rel="noopener">Post</a>` : ""}
+          </div>
+        </article>`;
+    }).join("");
     recentStatus.textContent = "";
   } catch (e) {
     recentStatus.textContent = e.message || "Network error";
   }
 }
+function escapeHtml(s){ return String(s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 loadRecent();
