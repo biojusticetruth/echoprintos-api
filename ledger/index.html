@@ -1,50 +1,29 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- Use your existing site stylesheet if you have one -->
-  <link rel="stylesheet" href="/theme.css">
-  <style>
-    :root { color-scheme: dark; }
-    body { margin:0; background:#0b0c10; color:#e8eaed;
-           font: 15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; }
-    .wrap { width:min(980px, 100% - 32px); margin: 24px auto 80px; }
-    .top { display:flex; align-items:center; gap:18px; padding:18px 0; }
-    .brand { font-weight:700; color:#62fbd1; text-decoration:none; }
-    .top a { color:#8ab4f8; text-decoration:none; }
-    .top a.active { color:#62fbd1; }
-    .card { background:#111318; border:1px solid #1c1f26; border-radius:14px; padding:20px 22px; margin:18px 0; }
-    h1,h2 { margin:0 0 10px; }
-    .muted { color:#8e90a3; }
-    .verify-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-    #q { flex:1 1 520px; height:44px; border-radius:10px; border:1px solid #22242b; background:#0e1015; color:#e8eaed; padding:0 12px; }
-    .btn { height:44px; padding:0 16px; border-radius:10px; border:1px solid #2a2f3a; background:#151922; color:#e8eaed; cursor:pointer; }
-    .btn-primary { background:#19e3b8; color:#001a14; border-color:#19e3b8; font-weight:700; }
-    .btn-ghost { background:transparent; }
-    .result { margin-top:12px; white-space:pre-wrap; background:#0e1015; padding:12px; border-radius:10px; border:1px solid #1e222c; }
-    ul.list { list-style:none; padding:0; margin:10px 0 0; }
-    .item { padding:12px 0; border-top:1px solid #1c1f26; }
-    .item:first-child { border-top:0; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    a.link { color:#8ab4f8; text-decoration:none; }
-    a.link:hover { text-decoration:underline; }
-  </style>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Load the polished theme that lives in /ledger/theme.css -->
+  <link rel="stylesheet" href="./theme.css?v=4" />
 </head>
 <body>
-  <div class="wrap">
 
-    <nav class="top">
+  <!-- Top nav -->
+  <nav class="nav">
+    <div class="wrap row">
       <a class="brand" href="/ledger/">EchoprintOS</a>
       <a class="active" href="/ledger/">Ledger</a>
       <a href="/capture/">Capture</a>
       <a href="/about/">About</a>
-    </nav>
+    </div>
+  </nav>
+
+  <div class="wrap">
 
     <section class="card">
       <h1>Proof-of-Care Ledger</h1>
-      <p class="muted">Browse recent records and verify any EchoprintOS Record ID or 64-hex hash.</p>
+      <p class="lead">Browse recent records and verify any EchoprintOS Record ID or 64-hex hash.</p>
     </section>
 
     <section class="card">
@@ -55,14 +34,14 @@
 
     <section class="card">
       <h2>Verify</h2>
-      <div class="verify-row">
+      <div class="controls">
         <input id="q" type="text" inputmode="text" autocomplete="off"
                placeholder="ECP-…  or  64-hex hash" />
-        <button id="btnVerify" class="btn btn-primary">Verify</button>
-        <button id="btnClear"  class="btn">Clear</button>
-        <button id="btnPaste"  class="btn btn-ghost" title="Paste from clipboard">Paste</button>
+        <button id="btnVerify" class="btn primary">Verify</button>
+        <button id="btnClear"  class="btn outline">Clear</button>
+        <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
       </div>
-      <div id="verifyResult" class="result"></div>
+      <div id="verifyResult" class="result" aria-live="polite"></div>
     </section>
 
     <section class="card">
@@ -73,7 +52,7 @@
 
   </div>
 
-  <!-- Bust cache with ?v=6 -->
-  <script type="module" src="/ledger/js/main.hard.js?v=6"></script>
+  <!-- JS for verify + recent -->
+  <script type="module" src="/ledger/js/main.hard.js?v=8"></script>
 </body>
 </html>
