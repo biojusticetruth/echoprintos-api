@@ -4,66 +4,88 @@
   <meta charset="utf-8">
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- minimal BioJustice-dark look you already have -->
   <link rel="stylesheet" href="./theme.css">
   <style>
-    /* Hide helper/status rows when empty */
-    .result:empty, #recentStatus:empty { display: none; }
-    /* tiny helper classes used below */
-    .card{padding:14px;border:1px solid #28303a;border-radius:12px;background:#0f1318}
-    .row{display:flex;gap:8px;align-items:center}
-    .row input{flex:1 1 auto}
-    .btn{background:#1f6feb;color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
-    .btn.ghost{background:#2b2f36;color:#e8eaed}
-    .tiny{font-size:12.5px}
-    .muted{color:#9aa0a6}
-    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    .list{display:grid;grid-template-columns:1fr;gap:12px}
-    @media (min-width:760px){ .list{grid-template-columns:1fr 1fr} }
-    .item{padding:12px;border:1px solid #28303a;border-radius:12px;background:#0f1318}
+    :root { color-scheme: dark; }
+    body { margin:0; background:#0b0c10; color:#e8eaed; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    a { color:#8ab4f8; text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .wrap { width:min(980px, 100% - 24px); margin:0 auto; }
+    header { border-bottom:1px solid #222831; background:#0b0c10cc; backdrop-filter:saturate(140%) blur(8px); position:sticky; top:0; z-index:10; }
+    nav { display:flex; gap:16px; align-items:center; padding:12px 0; }
+    nav .brand { font-weight:700; color:#e8eaed; }
+    .card { padding:14px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
+    .tiny { font-size:12.5px; }
+    .muted { color:#9aa0a6; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    /* verify form: buttons under the field */
+    .vcol { display:flex; flex-direction:column; gap:8px; }
+    input[type=text] { width:100%; padding:10px 12px; border:1px solid #2c313a; border-radius:10px; background:#0e1116; color:#e8eaed; }
+    .btn { background:#1f6feb; color:#fff; border:0; border-radius:10px; padding:10px 12px; cursor:pointer; }
+    .btn.ghost { background:#2b2f36; color:#e8eaed; }
+    .btn.small { padding:7px 10px; border-radius:8px; }
+    .result:empty, #recentStatus:empty { display:none; }
+    /* recent grid */
+    #recent { display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width:760px){ #recent { grid-template-columns:1fr 1fr; } }
+    .item { padding:12px; border:1px solid #28303a; border-radius:12px; background:#0f1318; }
+    .item h4 { margin:0 0 2px 0; font-weight:600; color:#e8eaed; }
+    .rowline { margin-top:.35rem; }
+    /* verify result hash truncation */
+    .hashline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .truncate { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #2b3038; border-radius:999px; background:#0d1117; color:#8ab4f8; font-weight:600; letter-spacing:.2px; }
+    main { padding:18px 0 48px 0; }
   </style>
 </head>
 <body>
 
-  <header style="padding:10px 0">
-    <nav style="display:flex;gap:14px;align-items:center">
-      <a href="/ledger/" style="text-decoration:none;color:#e8eaed;font-weight:600">EchoprintOS Ledger</a>
-      <a href="/ledger/about.html" class="tiny" style="color:#8ab4f8">About</a>
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/ledger/">EchoprintOS Ledger</a>
+      <!-- remove About for now per your note
+      <a class="tiny" href="/ledger/about.html">About</a>
+      -->
     </nav>
-  </header>
+  </div>
+</header>
 
-  <main style="width:min(980px, 100% - 24px);margin:0 auto 48px auto">
+<main class="wrap">
 
-    <!-- Directions (short + clean, no numbers) -->
-    <section class="card" style="margin-bottom:1rem">
-      <h2 style="margin:0 0 .25rem 0">How to verify</h2>
-      <p class="tiny muted" style="margin:0">
-        Paste an <strong>ECP</strong> or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
-      </p>
-    </section>
+  <!-- Directions -->
+  <section class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .25rem 0">How to verify</h2>
+    <p class="tiny muted" style="margin:0">
+      Paste an <strong>ECP</strong> (e.g., <code class="mono">ECP-20251108034124863</code>)
+      or a <strong>64-hex hash</strong>, then press <em>Verify</em>.
+    </p>
+  </section>
 
-    <!-- Verify (field starts empty; nothing shows below unless there’s a match) -->
-    <section id="verifySection" class="card">
-      <h2>Verify</h2>
-      <div class="row">
-        <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="ECP or 64-hex hash" aria-label="ECP or 64-hex hash" />
+  <!-- Verify -->
+  <section id="verifySection" class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .5rem 0">Verify</h2>
+    <div class="vcol">
+      <input id="q" type="text" inputmode="text" autocomplete="off"
+             placeholder="ECP or 64-hex hash" aria-label="ECP or 64-hex hash" />
+      <div style="display:flex; gap:8px;">
         <button id="btnVerify" class="btn">Verify</button>
         <button id="btnClear"  class="btn ghost">Clear</button>
       </div>
-      <div id="verifyResult" class="result tiny" style="margin-top:.5rem"></div>
-    </section>
+    </div>
+    <div id="verifyResult" class="result tiny" style="margin-top:.6rem"></div>
+  </section>
 
-    <!-- Recent (status starts empty; no “Loading…” text) -->
-    <section class="card" style="margin-top:1rem">
-      <h2>Recent</h2>
-      <div id="recentStatus" class="tiny muted"></div>
-      <div id="recent" class="list"></div>
-    </section>
+  <!-- Recent -->
+  <section class="card" style="margin:12px 0">
+    <h2 style="margin:0 0 .5rem 0">Recent</h2>
+    <div id="recentStatus" class="tiny muted"></div>
+    <div id="recent"></div>
+  </section>
 
-  </main>
+</main>
 
-  <!-- scripts (order matters) -->
-  <script type="module" src="./js/main.hard.js"></script>
+<!-- scripts -->
+<script type="module" src="./js/main.hard.js"></script>
 </body>
 </html>
