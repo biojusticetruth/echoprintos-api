@@ -68,15 +68,27 @@
 
   <main class="wrap">
 
-  <!-- HERO -->
-  <section class="card hero">
-    <h1 class="xl">Verify with EchoprintOS</h1>
-    <p class="lead">Check or confirm authenticity.</p>
-    <blockquote class="note">
-      “Each record in the Proof-of-Care Chain can be independently verified.
-      Enter an EchoprintOS Record ID or a 64-hex hash to verify authenticity.”
-    </blockquote>
-  </section>
+  <!-- HERO: Verify with EchoprintOS (centered, no orange, no field text) -->
+<section aria-labelledby="heroTitle"
+         style="text-align:center; padding:48px 0 28px; margin:0 0 18px;
+                border-radius:20px;
+                background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));">
+  <h1 id="heroTitle"
+      style="margin:0 0 8px; font-weight:800; line-height:1.1;
+             font-size:clamp(28px, 6vw, 54px);">
+    Verify with EchoprintOS
+  </h1>
+  <p style="margin:0 0 18px; color:#aab2bd; font-size:clamp(14px, 2.6vw, 20px);">
+    Check or confirm authenticity.
+  </p>
+  <blockquote style="max-width:820px; margin:0 auto; font-style:italic;
+                     color:#97a0aa; line-height:1.6;
+                     font-size:clamp(14px, 2.6vw, 20px);">
+    “Each record in the Proof-of-Care Chain can be independently verified.
+    Enter an <strong>EchoprintOS Record ID</strong> or a <strong>64-hex hash</strong>
+    to verify authenticity.”
+  </blockquote>
+</section>
 
   <!-- VERIFY -->
   <section id="verifySection" class="card">
