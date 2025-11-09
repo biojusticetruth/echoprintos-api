@@ -1,46 +1,164 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>EchoprintOS · Ledger</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/ledger/css/base.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS • Ledger</title>
+
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#11161d;
+      --panel-2:#0f141b;
+      --ink:#e8eef7;
+      --muted:#9aa7b5;
+      --line:rgba(255,255,255,.08);
+      --accent:#20e0c9;
+      --accent-ink:#0a1316;
+      --brand:#79f2c4;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:980px;margin:0 auto;padding:24px 20px 56px}
+
+    /* Header */
+    .site-header{
+      position:sticky; top:0; z-index:50;
+      background:linear-gradient(to bottom, rgba(11,15,20,.95), rgba(11,15,20,.85));
+      border-bottom:1px solid var(--line);
+      backdrop-filter:saturate(120%) blur(6px);
+    }
+    .nav{
+      max-width:980px; margin:0 auto; padding:12px 20px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px}
+    .brand .sprout{font-size:20px; line-height:1}
+    .menu{display:flex; gap:20px; list-style:none; margin:0; padding:0}
+    .menu a{color:var(--ink); opacity:.85}
+    .menu a[aria-current="page"]{color:var(--brand); opacity:1; font-weight:600}
+    .menu a:hover{opacity:1}
+
+    /* Cards */
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:20px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .hero{
+      background:var(--panel-2);
+      padding:28px;
+      margin-top:16px;
+      margin-bottom:22px;
+    }
+    h1{font-size:40px; line-height:1.1; margin:0 0 8px 0}
+    .sub{color:var(--muted); font-size:18px}
+
+    h2{font-size:28px; margin:0 0 14px}
+    .section{margin-top:18px}
+
+    /* Verify form */
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+    .input{
+      flex:1 1 260px;
+      background:#0d1218;
+      color:var(--ink);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:14px 14px;
+      font-size:16px;
+      outline:none;
+    }
+    .input::placeholder{color:#6d7b88}
+    .btn{
+      appearance:none; border:0; cursor:pointer;
+      padding:12px 18px; border-radius:12px; font-weight:600; font-size:16px;
+    }
+    .btn-primary{background:var(--accent); color:var(--accent-ink)}
+    .btn-ghost{background:#0d1218; color:var(--ink); border:1px solid var(--line)}
+    .hint{color:#ffbf66; margin-top:10px; font-size:14px}
+    .result{margin-top:14px; font-size:14px}
+    .result .ok{color:#7ef3c4; font-weight:700; margin-bottom:4px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    .tiny{font-size:13px; color:var(--muted)}
+    .muted{color:var(--muted)}
+
+    /* Recent list */
+    .feed{display:grid; gap:14px; margin-top:10px}
+    .item{
+      border:1px solid var(--line);
+      border-radius:14px; padding:14px 16px; background:#0c1117;
+    }
+
+    footer{margin-top:28px; color:var(--muted); font-size:13px}
+  </style>
 </head>
 <body>
-  <header class="site">
-    <div class="wrap bar">
-      <div class="brand">EchoprintOS</div>
-      <nav>
-        <a href="/ledger/">Ledger</a>
-        <a href="/ledger/capture.html">Capture</a>
-        <a href="https://echoprintos.org" target="_blank">About</a>
-      </nav>
-    </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <nav class="nav">
+      <div class="brand">
+        <span class="sprout">🌱</span>
+        <a href="/ledger/" style="color:inherit;text-decoration:none">EchoprintOS</a>
+      </div>
+      <ul class="menu">
+        <li><a href="/ledger/" aria-current="page">Ledger</a></li>
+        <li><a href="/ledger/capture.html">Capture</a></li>
+        <li><a href="/ledger/about.html">About</a></li>
+      </ul>
+    </nav>
   </header>
 
+  <!-- Body -->
   <main class="wrap">
 
-    <section class="panel" id="verifySection">
+    <!-- Hero -->
+    <section class="card hero">
+      <h1>EchoprintOS</h1>
+      <div class="sub">Generate a hash, verify by ECP or 64-hex hash, and browse recent records.</div>
+    </section>
+
+    <!-- Verify -->
+    <section id="verifySection" class="card section">
       <h2>Verify</h2>
-      <form id="verify-form">
-        <input id="verify-input" placeholder="Enter ECP-… or 64-hex hash" autocomplete="off">
-        <button class="btn" type="submit">Verify</button>
-      </form>
-      <div id="verify-result" style="margin-top:12px"></div>
+
+      <div class="row" style="margin-top:6px">
+        <input id="q" class="input" inputmode="text" autocomplete="off"
+               placeholder="ECP-YYYYMMDDHHMMSSmmm or 64-hex hash" />
+        <button id="btnVerify" class="btn btn-primary">Verify</button>
+        <button id="btnClear" class="btn btn-ghost">Clear</button>
+      </div>
+
+      <div id="verifyHelp" class="hint">Enter an ECP (ECP-YYYY…) or a 64-hex hash.</div>
+      <div id="verifyResult" class="result"></div>
     </section>
 
-    <section class="panel">
+    <!-- Recent -->
+    <section class="card section">
       <h2>Recent</h2>
-      <div id="recent-status" class="muted tiny" style="margin-bottom:8px"></div>
-      <div id="recent-list"></div>
+      <div id="recentStatus" class="tiny">Loading…</div>
+      <div id="recent" class="feed"></div>
     </section>
 
+    <footer class="wrap" style="padding-left:0;padding-right:0">
+      © EchoprintOS
+    </footer>
   </main>
 
-  <footer class="site">
-    <div class="wrap">© EchoprintOS</div>
-  </footer>
-
+  <!-- Scripts (order matters). main.js already contains SUPABASE URL + ANON KEY. -->
   <script type="module" src="/ledger/js/main.js?v=4"></script>
 </body>
 </html>
