@@ -261,3 +261,14 @@ header a[href*="/ledger"]:focus-visible{
   text-decoration: underline;
   outline: none;
 }
+
+/* Keep title on its own line */
+.fc-title { display:block; }
+
+/* Meta + IDs small & gray */
+.fc-meta { color:#6b7280; font-size:.92rem; }
+.fc-ids .idline { color:#6b7280; font-size:.86rem; line-height:1.35; overflow-wrap:anywhere; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Safety kill-switch in case any old .pill renders near titles */
+.fc-top .pill { display:none !important; }
