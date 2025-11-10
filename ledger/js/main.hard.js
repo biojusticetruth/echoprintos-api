@@ -77,17 +77,21 @@ function render(rows, listEl){
       : `<span class="fc-title">${title}</span>`;
 
     return `
-      <li class="item feed-card">
-        <div class="fc-top">
-          ${titleHtml}
-        </div>
-        <div class="fc-meta">Ledger: ${ledger}${pub}${plat}</div>
-        <div class="fc-ids">
-          ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`   : ''}
-          ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>` : ''}
-        </div>
-      </li>
-    `;
+  <li class="card glass edge glow-corners feed-card">
+    <div class="fc-top">
+      ${row.url
+        ? `<a class="fc-title" href="${href}" target="_blank" rel="noopener">${title}</a>`
+        : `<span class="fc-title">${title}</span>`}
+    </div>
+
+    <div class="fc-meta">Ledger: ${ledger}${pub}</div>
+
+    <div class="fc-ids">
+      ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`   : ''}
+      ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>` : ''}
+    </div>
+  </li>
+`;
   }).join('');
 }
 
