@@ -74,7 +74,6 @@ async function loadFeed(){
     const rows = await r.json();
 
     if (!rows.length){
-      if (statEl) statEl.textContent = 'No records yet.';
       render([], listEl);
       return;
     }
