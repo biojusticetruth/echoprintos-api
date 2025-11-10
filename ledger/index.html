@@ -2,66 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EchoprintOS • Ledger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoprintOS · Ledger</title>
   <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
-
   <main class="wrap">
-    <!-- VERIFICATION CARD -->
-    <section id="verify" class="epv card">
-      <header class="row">
+
+    <!-- HERO / PROVENANCE COPY -->
+    <section class="card hero">
+      <div class="eyebrow">LEDGER</div>
+      <h1 class="hero-title">EchoprintOS Provenance Layer</h1>
+      <p class="hero-copy">
+        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
+        network that preserves authorship integrity across systems. Each Echoprint
+        is a verifiable record of care: hashed, timestamped, and stored transparently.
+      </p>
+    </section>
+
+    <!-- VERIFICATION -->
+    <section id="verify" class="card">
+      <header class="card-head">
         <h2>Verification</h2>
-        <button id="epv-reset" class="reset" type="button">⟲ Reset</button>
+        <button id="btnReset" class="ghost small" type="button" aria-label="Reset">⟲ Reset</button>
       </header>
 
-      <div class="oval">
-        <input id="epv-ecp" class="field" type="text"
-               placeholder="EchoprintOS Record ID (ECP-…)" autocomplete="off" />
+      <div class="fields">
+        <input id="ecpInput" class="pill" inputmode="text" autocomplete="off"
+               placeholder="EchoprintOS Record ID (ECP-…)" />
+        <input id="hashInput" class="pill" inputmode="text" autocomplete="off"
+               placeholder="Or enter full 64-hex SHA-256 hash" />
+        <button id="btnVerify" class="primary" type="button">Verify Record</button>
       </div>
 
-      <div class="oval">
-        <input id="epv-hash" class="field" type="text"
-               placeholder="Or enter full 64-hex SHA-256 hash" autocomplete="off" />
-      </div>
+      <p class="help">Verify by EchoprintOS Record ID or 64-hex hash.</p>
 
-      <button id="epv-verify" class="cta" type="button">Verify Record</button>
-
-      <p class="hint">Verify by EchoprintOS Record ID or 64-hex hash.</p>
-
-      <blockquote>
-        “Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”
+      <blockquote class="quote">
+        <span class="bar"></span>
+        <p>“Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”</p>
       </blockquote>
 
-      <p class="foot">Verified by EchoprintOS Provenance Layer.</p>
+      <p class="provenance">Verified by EchoprintOS <span class="accent">Provenance Layer</span>.</p>
+    </section>
+
+    <!-- RECENT FEED -->
+    <section id="recent" class="card">
+      <header class="card-head"><h2>Recent</h2></header>
+      <div id="feed" class="feed"></div>
+      <div id="feedEmpty" class="muted" style="display:none;">No records yet.</div>
     </section>
   </main>
 
-  <!-- CERTIFICATE MODAL -->
-  <div id="epv-sheet" class="sheet" aria-hidden="true">
-    <div class="sheetcard">
-      <div class="top">
-        <span class="chip">Echoprint Certificate</span>
-        <div class="actions">
-          <a id="epv-open" class="link" href="#" target="_blank" rel="noopener" hidden>Open on Substack</a>
-          <button id="epv-close" class="close" type="button">Close</button>
-        </div>
-      </div>
-      <hr class="rule"/>
+  <!-- CERTIFICATE (SOLID SHEET; NOT TRANSPARENT) -->
+  <div id="certOverlay" class="overlay" aria-hidden="true">
+    <div class="sheet">
+      <button id="btnCloseCert" class="x" aria-label="Close">×</button>
+      <div class="sprout" aria-hidden="true">🌱</div>
+      <h3 class="sheet-title">Echoprint Certificate</h3>
+      <p class="sheet-sub">This record has been successfully verified.</p>
 
       <div class="kv">
-        <div class="k">Title</div>
-        <div id="epv-title" class="v">—</div>
-
-        <div class="k">EchoprintOS Record ID</div>
-        <div id="epv-record" class="v">—</div>
-
-        <div class="k">Timestamp (UTC)</div>
-        <div id="epv-ts" class="v">—</div>
+        <div class="k">TITLE</div>
+        <div class="v" id="certTitle">—</div>
       </div>
 
-      <p class="cert-foot">Verified through the EchoprintOS Provenance Layer.</p>
+      <div class="kv">
+        <div class="k">RECORD ID</div>
+        <div class="v" id="certEcp">—</div>
+      </div>
+
+      <div class="kv" id="rowHash" style="display:none;">
+        <div class="k">SHA-256 HASH</div>
+        <div class="v" id="certHash">—</div>
+      </div>
+
+      <div class="kv">
+        <div class="k">TIMESTAMP</div>
+        <div class="v" id="certTs">—</div>
+      </div>
+
+      <div class="sheet-actions">
+        <a id="openOnSubstack" class="btn-link" href="#" target="_blank" rel="noopener" style="display:none;">Open on Substack</a>
+        <button id="btnCloseBottom" class="primary">Close</button>
+      </div>
     </div>
   </div>
 
