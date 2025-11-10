@@ -178,3 +178,49 @@ input::placeholder{ color:#7f8ba0; }
 .kv .v{ color:var(--text); word-break: break-word; }
 
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+/* ==== Verification card tweaks ==== */
+.verify-card { padding: 20px 18px; }
+.verify-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.verify-head h2 { margin:0; }
+.verify-actions { margin-top:12px; }
+.micro { font-size: .875rem; }
+.under-hint { margin:.75rem 2px 0; }
+
+/* small ghost button */
+.btn.sm { height: 34px; padding: 0 10px; border-radius: 10px; font-weight:600; }
+
+/* ==== Pop-out modal ==== */
+.verify-pop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  background: rgba(0,0,0,.38); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  animation: fadeIn .12s ease-out; }
+.verify-pop.hidden { display:none; }
+
+.verify-pop .echocard{
+  width: min(640px, 92vw);
+  background: rgba(20,22,28,.92);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45), 0 0 0 1px rgba(64,255,214,.16);
+}
+.cardtitle{ margin:0; font-family:"Newsreader", ui-serif, Georgia, serif; font-weight:700; letter-spacing:-.01em; }
+.topline{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.topbtns{ display:flex; gap:10px; }
+.divline{ border:0; height:1px; background: rgba(255,255,255,.08); margin:10px 0 8px; }
+
+.kv{ display:grid; grid-template-columns: 180px 1fr; gap:8px 14px; margin:10px 2px 6px; }
+.kv dt{ color:#9aa7ba; font-size:.9rem; }
+.kv dd{ margin:0; font-size:1rem; }
+.kv .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.verify-note{ margin:10px 2px 6px; }
+.modal-foot{ display:flex; justify-content:flex-end; padding-top:6px; }
+
+/* Accessibility + transitions */
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+@media (max-width:520px){
+  .kv{ grid-template-columns: 1fr; }
+  .topbtns{ gap:6px; }
+}
