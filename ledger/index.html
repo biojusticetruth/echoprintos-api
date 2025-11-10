@@ -4,206 +4,240 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./theme.css?v=22" />
+  <link rel="stylesheet" href="./theme.css?v=21" />
+
+  <!-- Small visual overrides -->
   <style>
-    /* --- light layout helpers (keeps working with your theme) --- */
-    .wrap { position: relative; }
-    .h2bar{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
-    .verify-input{width:100%;padding:.95rem 1rem;border-radius:1.25rem;border:1px solid #2b3841;background:#0c1418;color:#dfeeea}
-    .verify-grid{display:grid;grid-template-columns:1fr;gap:.75rem}
-    .btn.big{display:flex;align-items:center;justify-content:center;width:100%;padding:1rem 1.25rem;font-size:1.05rem;border-radius:1.75rem}
-    .btn.mint{background:#20e3a2;color:#06241c;border:0}
-    .btn.dark{background:#10161b;color:#e6f5f0;border:1px solid #26323a}
-    .btn.subtle{background:transparent;border:1px solid #2a3740;color:#a9c7be;opacity:.75}
-    .btn.subtle:hover{opacity:.95}
-    .muted{opacity:.72}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .list{list-style:none;margin:0;padding:0;position:relative;z-index:1}
-    .card-item{border:1px solid #223038;border-radius:1rem;padding:.9rem 1rem;background:rgba(16,22,27,.6);backdrop-filter:blur(6px)}
-    .row-link{display:block;color:inherit;text-decoration:none}
-    .row-link:hover{background:rgba(32,227,162,.06);border-radius:.75rem}
-    .kv{margin:.25rem 0}
-    /* keep any floating overlays from blocking clicks */
-    .card.glass, .sheen { position: relative; z-index: 0; }
-    /* hero lighter on mobile = less top-heavy */
-    .hero-lite{padding:1.1rem 1.1rem}
-    @media (min-width:680px){ .hero-lite{padding:1.6rem 1.6rem} }
-    /* recent header button look “less visible” */
-    .section-note{font-size:.9rem;margin-top:.35rem}
+    /* Top nav tweaks */
+    .nav .brand { text-decoration:none; }
+    .nav a.brand:hover { opacity:.9 }
+
+    /* Hero card a bit more transparent / airy */
+    .hero-glass {
+      --hero-bg: rgba(15,22,28,.35);
+      --hero-brd: rgba(255,255,255,.08);
+      background: var(--hero-bg);
+      border: 1px solid var(--hero-brd);
+      backdrop-filter: blur(12px) saturate(140%);
+    }
+
+    /* Verify layout */
+    .verify-card .btn.primary { font-weight:600; }
+    .btn-reset {
+      background: transparent; border:1px solid rgba(255,255,255,.08);
+      color: rgba(255,255,255,.75); box-shadow:none;
+    }
+    .btn-reset:hover { color:#fff; border-color:rgba(255,255,255,.15); }
+    .btn-paste {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .btn-paste:hover { background: rgba(255,255,255,.08); }
+
+    /* Hide the result box unless we have content */
+    #verifyResult { display:none; }
+    #verifyResult.show { display:block; margin-top:.5rem; }
+
+    /* Recent grid as individual glow cards */
+    .recent-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
+      gap: 14px;
+    }
+    .recent-card {
+      background: rgba(20,26,32,.40);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .recent-card:before {
+      content:"";
+      position:absolute; inset:-30% -30%;
+      background: radial-gradient(120px 120px at 20% 0%,
+                rgba(0,255,200,.18), transparent 60%);
+      filter: blur(24px);
+      opacity:.55; pointer-events:none;
+    }
+    .recent-card a { color: #9afadf; text-decoration:none; }
+    .recent-card a:hover { text-decoration:underline; }
+    .recent-meta { font-size:.86rem; opacity:.75; line-height:1.25; }
+    .recent-ecp  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+
+    /* Make hero less top-heavy on phones */
+    @media (max-width: 540px){
+      .hero-glass { padding-top: 18px; padding-bottom: 18px; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- Top Nav (glass) -->
   <header class="nav">
     <div class="wrap">
       <div class="row">
         <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
         <!-- Capture removed by request -->
-        <a class="disabled" href="javascript:void(0)" style="pointer-events:none;opacity:.6">About</a>
+        <a href="/about/">About</a>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-
-    <!-- Hero (lighter padding to reduce top-heaviness) -->
-    <section class="card glass edge glow-corners sheen hero-lite">
+    <!-- Hero glass card -->
+    <section class="card glass edge glow-corners sheen hero-glass">
       <span class="pill">LEDGER</span>
-      <h1 class="display" style="margin-bottom:.25rem">EchoprintOS Provenance Layer</h1>
-      <p class="lead" style="margin-top:.25rem">
-        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping network that preserves
-        authorship integrity across systems. Each Echoprint is a verifiable record of care: hashed, timestamped,
-        and stored transparently.
+      <h1 class="display">EchoprintOS Provenance Layer</h1>
+      <p class="lead">
+        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
+        network that preserves authorship integrity across systems. Each Echoprint is
+        a verifiable record of care: hashed, timestamped, and stored transparently.
       </p>
     </section>
 
-    <!-- Verification -->
-    <section class="card glass sheen">
-      <div class="h2bar">
-        <h2 style="margin:0">Verification</h2>
-        <button id="btnReset" class="btn subtle" style="border-radius:1rem;padding:.4rem .75rem">Reset</button>
+    <!-- Verify -->
+    <section class="card glass sheen verify-card">
+      <div class="row space-between">
+        <h2>Verification</h2>
+        <button id="btnReset" class="btn btn-reset">Reset</button>
       </div>
 
-      <div class="verify-grid" style="margin-top:.6rem">
-        <input id="inpECP"  class="verify-input" placeholder="EchoprintOS Record ID (ECP-…)" autocomplete="off" inputmode="text" />
-        <input id="inpHash" class="verify-input" placeholder="Or enter full SHA-256 hash" autocomplete="off" inputmode="text" />
-        <button id="btnVerify" class="btn big mint">Verify Record</button>
-        <button id="btnPaste"  class="btn big dark">Paste</button>
+      <!-- Two inputs; either one works. Second mirrors into the first. -->
+      <div class="stack">
+        <input id="q" class="input" type="text" inputmode="text" autocomplete="off"
+               placeholder="EchoprintOS Record ID (ECP-…)" />
+        <input id="hashInput" class="input" type="text" inputmode="text" autocomplete="off"
+               placeholder="Or enter full SHA-256 hash" />
+        <button id="btnVerify" class="btn primary">Verify Record</button>
+        <button id="btnPaste" class="btn btn-paste">Paste</button>
       </div>
 
-      <div id="verifyResult" class="result" style="margin-top:1rem"></div>
-      <p class="section-note muted">
-        Verify by EchoprintOS Record ID or 64-hex hash. The ledger below is the canonical archive for the BioJustice
-        Philosophical Framework.
-      </p>
+      <div id="verifyResult" class="result"></div>
+      <p class="tip">Verify by EchoprintOS Record ID or 64-hex hash. The ledger below is the canonical artifact.</p>
     </section>
 
-    <!-- Recent / Ledger -->
+    <!-- Recent -->
     <section class="card glass">
-      <h2 style="margin-bottom:.35rem">Ledger</h2>
-      <div id="recentStatus" class="lead">Loading…</div>
-      <ul id="recent" class="list"></ul>
+      <div class="row space-between">
+        <h2>Recent</h2>
+        <small id="recentStatus" class="muted">Loading…</small>
+      </div>
+      <div id="recent" class="recent-grid"></div>
     </section>
   </main>
 
-  <!-- Page JS -->
+  <!-- Recent list loader (Supabase REST) -->
   <script>
-    // --- project keys (same as before) ---
+  (async () => {
+    // 🔐 Supabase read-only (leave as-is)
     const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
     const SUPABASE_ANON_KEY =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
-    const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
-    const qs = parts => parts.join('&');
-
-    const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const isHex64 = s => /^[0-9a-f]{64}$/i.test((s||'').trim());
-    const isUUID  = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test((s||'').trim());
-    const isECP   = s => /^ECP-\d{17,}$/.test((s||'').trim());
-    const utcISO  = ts => { try { return new Date(ts).toISOString().replace('Z','+00:00'); } catch { return ts||''; } };
-
-    // ---- Verify UI ----
-    const inpECP = document.getElementById('inpECP');
-    const inpHash = document.getElementById('inpHash');
-    const btnVerify = document.getElementById('btnVerify');
-    const btnPaste  = document.getElementById('btnPaste');
-    const btnReset  = document.getElementById('btnReset');
-    const verifyResult = document.getElementById('verifyResult');
-
-    btnReset.onclick = () => { inpECP.value=''; inpHash.value=''; verifyResult.innerHTML=''; };
-
-    btnPaste.onclick = async () => {
-      try {
-        const txt = (await navigator.clipboard.readText()||'').trim();
-        if (!txt) return;
-        if (!inpECP.value) inpECP.value = txt; else inpHash.value = txt;
-      } catch { alert('If Paste is blocked, tap a field and use your system paste.'); }
-    };
-
-    btnVerify.onclick = async () => {
-      verifyResult.innerHTML = '';
-      const q1 = (inpECP.value||'').trim();
-      const q2 = (inpHash.value||'').trim();
-      const probe = q1 || q2;
-      if (!probe) { verifyResult.innerHTML = '<div class="muted">Enter an EchoprintOS Record ID or a full SHA-256 hash.</div>'; return; }
-
-      const filters = [];
-      if (isECP(probe))  filters.push(`ecp_record_id.eq.${probe}`);
-      if (isHex64(probe)) filters.push(`hash.eq.${probe}`);
-      if (isUUID(probe))  filters.push(`id.eq.${probe}`);
-      if (q1 && isHex64(q1)) filters.push(`hash.eq.${q1}`);
-      if (q2 && isECP(q2))   filters.push(`ecp_record_id.eq.${q2}`);
-
-      const url = `${SUPABASE_URL}/rest/v1/echoprints?` + qs([
-        'select=title,url,hash,ecp_record_id,created_iso,source',
-        'limit=1',
-        'or=(' + encodeURIComponent(filters.join(',')) + ')'
-      ]);
-
-      try {
-        const res = await fetch(url, { headers: H, cache:'no-store' });
-        if (!res.ok) throw new Error('Lookup failed: '+res.status);
-        const rows = await res.json();
-        if (!rows.length) { verifyResult.innerHTML = '<div class="muted">No matching record was found.</div>'; return; }
-
-        const r = rows[0];
-        const title = esc(r.title || '(Untitled)');
-        const view  = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">View source</a>` : '';
-        const ecp   = esc(r.ecp_record_id || '');
-        const when  = utcISO(r.created_iso);
-
-        verifyResult.innerHTML =
-          `<div class="card-item" style="margin-top:.25rem">
-             <div style="font-weight:600;margin-bottom:.25rem">${title}</div>
-             <div class="kv mono">EchoprintOS Record ID:</div>
-             <div class="kv mono" style="word-break:break-all">${ecp}</div>
-             <div class="kv mono">TIMESTAMP (UTC): <span class="mono">${when}</span></div>
-             ${view ? `<div style="margin-top:.5rem">${view}</div>` : ''}
-           </div>`;
-      } catch (e) {
-        verifyResult.innerHTML = '<div class="muted">Error verifying record.</div>';
-        console.error(e);
-      }
-    };
-
-    // ---- Ledger list ----
     const statusEl = document.getElementById('recentStatus');
-    const listEl = document.getElementById('recent');
+    const gridEl   = document.getElementById('recent');
 
-    (async () => {
-      const url = `${SUPABASE_URL}/rest/v1/echoprints?` + qs([
-        'select=title,url,ecp_record_id,created_iso,source',
+    const pad = (n,l=2)=>String(n).padStart(l,'0');
+    const ecpFromTs = (isoOrTs) => {
+      const d = new Date(isoOrTs);
+      if (isNaN(d)) return null;
+      // Build ECP-YYYYMMDDHHMMSSmmm in UTC
+      return `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`
+           + `${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
+    };
+    const fmtUTC = (isoOrTs) => {
+      const d = new Date(isoOrTs);
+      return isNaN(d) ? '' : d.toISOString().replace('Z','+00:00');
+    };
+
+    function cardHtml(r){
+      // pick a timestamp field in priority order
+      const ts = r.timestamp_iso || r.timestamp || r.created_at || r.created_iso;
+      const ecp = ecpFromTs(ts);
+      const when = fmtUTC(ts);
+      const title = (r.title && r.title.trim()) ? r.title.trim() : '(untitled)';
+      const linkOpen = r.url ? `<a href="${r.url}" target="_blank" rel="noopener">` : '<span>';
+      const linkClose = r.url ? '</a>' : '</span>';
+
+      // separate glow card
+      return `
+        <div class="recent-card sheen">
+          <div class="recent-title">${linkOpen}${escapeHtml(title)}${linkClose}</div>
+          <div class="recent-meta">
+            ${ecp ? `<div class="recent-ecp">${ecp}</div>` : ``}
+            ${when ? `<div>${when} <span style="opacity:.65">UTC</span></div>` : ``}
+          </div>
+        </div>`;
+    }
+
+    function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;')
+                                         .replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                                         .replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    try {
+      const qs = [
+        'select=title,url,hash,timestamp,timestamp_iso,created_at,created_iso',
         'order=created_at.desc',
         'limit=12'
-      ]);
+      ].join('&');
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        cache: 'no-store'
+      });
+
+      if (!res.ok) { statusEl.textContent = `Read error: ${res.status}`; return; }
+
+      const rows = await res.json();
+      if (!rows.length) { statusEl.textContent = 'No records yet.'; return; }
+
+      statusEl.textContent = '';
+      gridEl.innerHTML = rows.map(cardHtml).join('');
+    } catch (e) {
+      statusEl.textContent = 'Read error.'; console.error(e);
+    }
+  })();
+
+  // Verify UI niceties (keeps your existing main.hard.js behavior)
+  (function wireVerifyUI(){
+    const q = document.getElementById('q');
+    const hash = document.getElementById('hashInput');
+    const pasteBtn = document.getElementById('btnPaste');
+    const resetBtn = document.getElementById('btnReset');
+    const result = document.getElementById('verifyResult');
+
+    // Mirror secondary field into the primary one main.hard.js uses.
+    hash.addEventListener('input', () => { q.value = hash.value; });
+
+    pasteBtn.addEventListener('click', async () => {
       try {
-        const res = await fetch(url, { headers: H, cache:'no-store' });
-        if (!res.ok) { statusEl.textContent = `Read error: ${res.status}`; return; }
-        const rows = await res.json();
-        if (!rows.length) { statusEl.textContent = 'No records yet.'; return; }
-        statusEl.textContent = '';
+        const txt = await navigator.clipboard.readText();
+        if (!document.activeElement || document.activeElement === document.body) {
+          q.value = txt; hash.value = txt;
+        } else {
+          document.activeElement.value = txt;
+          if (document.activeElement === q) hash.value = txt;
+          if (document.activeElement === hash) q.value = txt;
+        }
+      } catch {}
+    });
 
-        listEl.innerHTML = rows.map(r => {
-          const title = esc(r.title || '(Untitled)');
-          const href  = r.url ? esc(r.url) : null;
-          const ecp   = esc(r.ecp_record_id || '');
-          const when  = utcISO(r.created_iso);
-          const src   = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.75">${esc(r.source)}</span>` : '';
-          const meta  = `<div class="muted mono" style="margin-top:.15rem">${when} • ${ecp}</div>`;
-          const inner = `<div style="font-weight:600">${title}${src}</div>${meta}`;
+    resetBtn.addEventListener('click', () => {
+      q.value = ''; hash.value = '';
+      result.textContent = ''; result.classList.remove('show');
+    });
 
-          return `<li class="card-item">${href
-            ? `<a class="row-link" href="${href}" target="_blank" rel="noopener">${inner}</a>`
-            : inner}
-          </li>`;
-        }).join('');
-      } catch (e) {
-        statusEl.textContent = 'Read error.';
-        console.error(e);
-      }
-    })();
+    // If your /ledger/js/main.hard.js writes into #verifyResult, show it.
+    const obs = new MutationObserver(() => {
+      if (result.textContent.trim()) result.classList.add('show');
+    });
+    obs.observe(result, { childList: true, subtree: true, characterData: true });
+  })();
   </script>
+
+  <!-- Your existing verification logic (unchanged) -->
+  <script type="module" src="/ledger/js/main.hard.js?v=21"></script>
 </body>
 </html>
