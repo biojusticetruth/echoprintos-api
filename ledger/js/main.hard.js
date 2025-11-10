@@ -63,7 +63,6 @@ function render(rows, listEl){
     listEl.innerHTML = `<li class="item">No posts yet.</li>`;
     return;
   }
-
   listEl.innerHTML = rows.map(row => {
     const title  = esc(row.title || '(untitled)');
     const href   = row.url ? esc(row.url) : '#';
@@ -79,13 +78,11 @@ function render(rows, listEl){
 
     return `
       <li class="item feed-card">
-        <!-- Title only: no platform here -->
-        <div class="fc-top">${titleHtml}</div>
-
-        <!-- Meta line: timestamp(s) + platform label -->
+        <div class="fc-top">
+          ${titleHtml}
+          ${row.platform ? `<span class="pill">${esc(row.platform)}</span>` : ''}
+        </div>
         <div class="fc-meta">Ledger: ${ledger}${pub}${plat}</div>
-
-        <!-- IDs block -->
         <div class="fc-ids">
           ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`   : ''}
           ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>` : ''}
@@ -94,3 +91,5 @@ function render(rows, listEl){
     `;
   }).join('');
 }
+
+document.addEventListener('DOMContentLoaded', loadFeed);
