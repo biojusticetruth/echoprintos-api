@@ -264,3 +264,43 @@ header a[href*="/ledger"]:focus-visible{
 
 /* Keep title on its own line */
 .fc-title { display:block; }
+
+/* Mini hero-style feed cards */
+.feed-card.card{
+  margin: 12px 0;
+  padding: 16px 18px;        /* match hero spacing, slightly tighter */
+  border-radius: 18px;
+}
+
+/* Slightly lighter glass so the page isn’t top-heavy */
+.feed-card.card.glass{
+  background:
+    linear-gradient(to bottom, var(--glass-hi), transparent),
+    rgba(12,16,22,.46);
+  border: 1px solid var(--glass-br);
+  box-shadow: 0 10px 26px rgba(0,0,0,.28);
+}
+
+/* Use the edge gradient like the hero (already defined by your theme) */
+.feed-card.card.glass.edge{
+  /* keep your theme’s edge gradient */
+}
+
+/* If you want a PURE green edge instead, uncomment this:
+.feed-card.card.glass.edge{
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(18,20,26,.72), rgba(18,20,26,.58)) padding-box,
+    linear-gradient(120deg, rgba(32,227,178,.55), rgba(32,227,178,.25)) border-box;
+}
+*/
+
+.fc-title { display:block; font-weight:600; letter-spacing:.005em; }
+.feed-card a.fc-title { color: var(--accent); text-decoration:none; }
+.feed-card a.fc-title:hover { text-decoration: underline; }
+
+.fc-meta { margin-top:.25rem; color:#9aa7ba; font-size:.92rem; }
+.fc-ids .idline { margin-top:.15rem; color:#7f8ba0; font-size:.86rem; line-height:1.35; overflow-wrap:anywhere; }
+
+/* If any old list rules linger, neutralize them */
+.list .item { border-top: 0; }
