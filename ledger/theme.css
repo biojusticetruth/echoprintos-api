@@ -121,3 +121,66 @@ body.parchment::after{
 /* Links */
 a{ color: #0b5; text-decoration:none }
 a:hover{ text-decoration:underline }
+
+/* ========== BioJustice parchment quote card ========== */
+.bj-quote{
+  background: #FFFEFB;                 /* slightly lighter than card */
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.08);
+  padding: 18px 20px 20px;
+  position: relative;
+  isolation: isolate;                   /* keeps glow contained */
+}
+
+/* Sprout badge */
+.bj-quote-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:8px;
+  min-height: 20px;
+}
+.bj-sprout{
+  display:inline-grid; place-items:center;
+  width:34px; height:34px;
+  border-radius:999px;
+  background:#ffffff;
+  border:1px solid var(--stroke);
+  box-shadow: 0 3px 10px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.7);
+  color: var(--accent);                 /* BioJustice green */
+  font-size:18px; line-height:1;
+}
+
+/* Quote body */
+.bj-quote-text{
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.55;
+  color: var(--paper-ink);
+}
+
+/* Signature */
+.bj-quote-sig{
+  margin-top: 10px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Subtle left accent when hovering (parchment-friendly) */
+.bj-quote:hover{
+  border-color: #E2DBD1;
+  box-shadow: 0 14px 34px rgba(0,0,0,.10);
+}
+
+/* Optional: thin accent bar under the sprout for a “ledger tick” feel */
+.bj-quote::before{
+  content:"";
+  position:absolute; left:20px; top:48px; width:42px; height:3px;
+  background: linear-gradient(90deg, var(--accent), rgba(28,196,103,.15));
+  border-radius: 3px;
+  opacity:.85;
+}
+@media (max-width:560px){
+  .bj-quote-text{ font-size:18px; }
+  .bj-quote::before{ top:46px; width:36px; }
+}
