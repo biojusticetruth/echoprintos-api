@@ -1,165 +1,163 @@
-// --- Supabase config (yours) ---
-const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+/* EchoprintOS ledger JS (v22) */
 
-const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+/* 1) Config from window (set in index.html) */
+const SUPABASE_URL      = window.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
+const SUBSTACK_HOME     = window.SUBSTACK_HOME || 'https://biojusticetruth.substack.com/';
 
-// --- DOM ---
-const inpEcp   = document.getElementById('inpEcp');
-const inpHash  = document.getElementById('inpHash');
-const btnVerify= document.getElementById('btnVerify');
-const btnPaste = document.getElementById('btnPaste');
-const btnReset = document.getElementById('btnReset');
+/* 2) DOM refs */
+const qEcp   = document.getElementById('q-ecp');
+const qHash  = document.getElementById('q-hash');
+const btnV   = document.getElementById('btnVerify');
+const btnP   = document.getElementById('btnPaste');
+const vRes   = document.getElementById('verifyResult');
+
 const recentStatus = document.getElementById('recentStatus');
-const recentGrid   = document.getElementById('recentGrid');
+const recentWrap   = document.getElementById('recent');
 
-// --- utils ---
-const esc = (s='') => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const isHex64 = (s='') => /^[0-9a-f]{64}$/i.test(s.trim());
-const pad = (n,len=2)=>String(n).padStart(len,'0');
+const verifyPop = document.getElementById('verifyPop');
+const popT  = document.getElementById('popT');
+const popE  = document.getElementById('popECP');
+const popI  = document.getElementById('popISO');
+const popV  = document.getElementById('popView');
+const popX  = document.getElementById('popClose');
 
-function isoUTC(val){
-  try { return new Date(val).toISOString().replace('Z','+00:00'); }
-  catch { return ''; }
+/* 3) Helpers */
+const esc = s => (s||'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const pad = (n,w=2)=>String(n).padStart(w,'0');
+const looksHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim());
+
+function isoUTC(ts){
+  try{ const d = new Date(ts); return isNaN(d) ? (ts||'') : d.toISOString().replace('Z','+00:00'); }
+  catch{ return ts||''; }
 }
-function ecpFromIso(iso){
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  return `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}`
-       + `${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
+
+function ecpFromISO(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})/.exec(iso||'');
+  if(!m) return '';
+  const [,Y,Mo,D,H,Mi,S,Ms] = m;
+  return `ECP-${Y}${Mo}${D}${H}${Mi}${S}${Ms}`;
 }
-function isoFromEcp(ecp){
-  const m = /^ECP-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{3})$/.exec(ecp||'');
-  if (!m) return null;
-  const [_,Y,Mo,D,H,Mi,S,Ms]=m;
+
+function isoFromECP(ecp){
+  const m = /^ECP-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{3})$/.exec((ecp||'').trim());
+  if(!m) return null;
+  const [,Y,Mo,D,H,Mi,S,Ms] = m;
   return `${Y}-${Mo}-${D}T${H}:${Mi}:${S}.${Ms}+00:00`;
 }
 
-// --- verify pop-out card ---
-function openVerifyCard(r){
-  const iso = r.timestamp_iso || r.created_iso || r.created_at || r.timestamp;
-  const when = isoUTC(iso);
-  const ecp  = when ? ecpFromIso(when) : '';
-  const title= esc(r.title || '(untitled)');
-  const view = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" class="btn outline">View</a>` : '';
-
-  const wrap = document.createElement('div');
-  wrap.className = 'verify-pop';
-  wrap.innerHTML = `
-    <div class="echocard">
-      <div class="topline">
-        <strong>${title}</strong>
-        <div>${view} <button class="close" type="button">Close</button></div>
-      </div>
-      ${ecp ? `<div class="muted"><strong>EchoprintOS Record ID</strong><br><code class="mono">${ecp}</code></div>` : ''}
-      ${when ? `<div class="muted" style="margin-top:.35rem"><strong>TIMESTAMP (UTC)</strong><br><code class="mono">${when}</code></div>` : ''}
-      ${r.hash ? `<div class="muted" style="margin-top:.5rem"><code class="mono" style="opacity:.8">${esc(r.hash)}</code></div>` : ''}
-    </div>`;
-  const close = () => wrap.remove();
-  wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
-  wrap.querySelector('.close').addEventListener('click', close);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); }, { once:true });
-  document.body.appendChild(wrap);
-}
-
-function announce(msg){
-  // brief inline note under Paste for errors/empty input
-  const p = document.createElement('p');
-  p.className = 'tip muted';
-  p.style.marginTop = '8px';
-  p.textContent = msg;
-  btnPaste.insertAdjacentElement('afterend', p);
-  setTimeout(()=>p.remove(), 2600);
-}
-
-// --- Verify handler ---
-async function verify(){
-  const ecp = (inpEcp.value||'').trim();
-  const hex = (inpHash.value||'').trim();
-
-  if (!ecp && !hex){ announce('Enter an ECP or full hash.'); return; }
-
-  const parts = ['select=id,title,url,hash,timestamp,timestamp_iso,created_at,created_iso','limit=1'];
-  const ors = [];
-  if (hex && isHex64(hex)) ors.push(`hash.eq.${hex}`);
-  if (ecp){
-    const iso = isoFromEcp(ecp);
-    if (!iso){ announce('ECP should be ECP-YYYYMMDDHHMMSSmmm'); return; }
-    ors.push(`created_at.eq.${encodeURIComponent(iso)}`);
-    ors.push(`timestamp_iso.eq.${encodeURIComponent(iso)}`);
-    ors.push(`created_iso.eq.${encodeURIComponent(iso)}`);
-  }
-  const url = `${SUPABASE_URL}/rest/v1/echoprints?${parts.join('&')}&or=(${ors.join(',')})`;
-
-  try{
-    const res = await fetch(url, { headers:H, cache:'no-store' });
-    if (!res.ok){ announce(`Verify error: ${res.status}`); return; }
-    const rows = await res.json();
-    if (!rows.length){ announce('No matching record found.'); return; }
-    openVerifyCard(rows[0]);
-  }catch(e){
-    console.error(e);
-    announce('Verify error.');
-  }
-}
-
-// --- Recent feed ---
+/* 4) Recent feed (buttonless cards; title link + Substack chip) */
 async function loadRecent(){
   recentStatus.textContent = 'Loading…';
-  recentGrid.innerHTML = '';
+  recentWrap.innerHTML = '';
 
   const qs = [
-  // include source in the projection so we can filter server-side
-  'select=title,url,hash,timestamp,timestamp_iso,created_at,created_iso,source',
-  // ⬇️ show ONLY rows that came from Substack
-  'source=eq.Substack',
-  'order=created_at.desc',
-  'limit=12'
-].join('&');
-  
-  try{
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers:H, cache:'no-store' });
-    if (!res.ok){ recentStatus.textContent = `Read error: ${res.status}`; return; }
-    const rows = await res.json();
-    if (!rows.length){ recentStatus.textContent = 'No records yet.'; return; }
+    'select=title,url,"timestamp",timestamp_iso,source',
+    'order=timestamp.desc',
+    'limit=12'
+  ].join('&');
 
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      cache: 'no-store'
+    });
+    if(!r.ok){ throw new Error(`Read error: ${r.status}`); }
+    let rows = await r.json();
+
+    // remove obvious test placeholders like "test"
+    rows = rows.filter(row => !/^\s*test\b/i.test(row.title||''));
+
+    if(!rows.length){ recentStatus.textContent = 'No records yet.'; return; }
     recentStatus.textContent = '';
-    recentGrid.innerHTML = rows.map(r => {
-      const iso = r.timestamp_iso || r.created_iso || r.created_at || r.timestamp;
-      const when = isoUTC(iso);
-      const ecp  = when ? ecpFromIso(when) : '';
-      const title= esc(r.title || '(untitled)');
-      const linkOpen  = r.url ? `<a class="title" href="${esc(r.url)}" target="_blank" rel="noopener">` : '<span class="title">';
-      const linkClose = r.url ? '</a>' : '</span>';
+
+    recentWrap.innerHTML = rows.map(row => {
+      const title = esc(row.title || 'Untitled');
+      const href  = row.url || SUBSTACK_HOME;
+      const iso   = isoUTC(row.timestamp_iso || row.timestamp || '');
+      const ecp   = ecpFromISO(iso);
+      const src   = (row.source || 'Substack') + '';
+
+      const srcPill = `<a class="pill-src" href="${esc(SUBSTACK_HOME)}" target="_blank" rel="noopener">${esc(src)}</a>`;
 
       return `
-        <div class="echocard">
-          <div>
-            <div style="margin-bottom:.35rem">${linkOpen}${title}${linkClose}</div>
-            ${ecp  ? `<div class="muted"><strong>EchoprintOS Record ID</strong><br><code class="mono">${ecp}</code></div>` : ''}
-            ${when ? `<div class="muted" style="margin-top:.25rem"><strong>TIMESTAMP (UTC)</strong><br><code class="mono">${when}</code></div>` : ''}
-          </div>
-          ${r.hash ? `<div class="muted" style="margin-top:.5rem"><code class="mono" style="opacity:.7">${esc(r.hash.slice(0,10))}…</code></div>` : ''}
-        </div>`;
+        <div class="feed-card">
+          <div class="t"><a href="${esc(href)}" target="_blank" rel="noopener">${title}</a>${srcPill}</div>
+          <div class="meta"><span class="k">ECP: </span><span class="v nowrap">${esc(ecp)}</span></div>
+          <div class="meta"><span class="k">TIMESTAMP (UTC): </span><span class="v">${esc(iso)}</span></div>
+        </div>
+      `;
     }).join('');
-  }catch(e){
-    console.error(e);
+  }catch(err){
+    console.error(err);
     recentStatus.textContent = 'Read error.';
   }
 }
 
-// --- Wire events ---
-btnVerify.addEventListener('click', verify);
-document.addEventListener('keydown', e => { if (e.key === 'Enter') verify(); });
-btnPaste.addEventListener('click', async () => {
-  try{
-    const txt = (await navigator.clipboard.readText() || '').trim();
-    if (!txt) return;
-    if (!inpEcp.value) inpEcp.value = txt; else inpHash.value = txt;
-  }catch{}
-});
-btnReset.addEventListener('click', () => { inpEcp.value=''; inpHash.value=''; });
+/* 5) Verify behavior (ECP or full hash) */
+async function onVerify(){
+  vRes.hidden = true; vRes.textContent = '';
 
-// Kick it off
+  const ecp  = (qEcp.value||'').trim();
+  const hash = (qHash.value||'').trim();
+
+  let qs = null;
+  if (ecp){
+    const iso = isoFromECP(ecp);
+    if(!iso){ return showInline('Invalid ECP format. Use ECP-YYYYMMDDHHMMSSmmm.'); }
+    qs = `select=title,url,"timestamp",timestamp_iso&timestamp=eq.${encodeURIComponent(iso)}&limit=1`;
+  } else if (hash){
+    if(!looksHex64(hash)){ return showInline('Hash must be a full 64-hex SHA-256 value.'); }
+    qs = `select=title,url,"timestamp",timestamp_iso&hash=eq.${encodeURIComponent(hash)}&limit=1`;
+  } else {
+    return showInline('Enter an ECP or a 64-hex hash.');
+  }
+
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      cache:'no-store'
+    });
+    if(!r.ok){ throw new Error(`Verify error: ${r.status}`); }
+    const rows = await r.json();
+    if(!rows.length){ return showInline('No matching record.'); }
+
+    const row = rows[0];
+    const iso = isoUTC(row.timestamp_iso || row.timestamp || '');
+    const ecpOut = ecpFromISO(iso);
+
+    popT.textContent  = row.title || 'Untitled';
+    popE.textContent  = ecpOut || '(unavailable)';
+    popI.textContent  = iso || '(unknown)';
+    popV.href         = row.url || SUBSTACK_HOME;
+
+    openModal();
+  }catch(err){
+    console.error(err);
+    showInline('Could not verify right now.');
+  }
+}
+
+function showInline(msg){ vRes.textContent = msg; vRes.hidden = false; }
+async function onPaste(){
+  try{
+    const txt = (await navigator.clipboard.readText()).trim();
+    if (!txt) return;
+    if (/^ECP-\d{17}$/.test(txt)) qEcp.value = txt;
+    else if (looksHex64(txt)) qHash.value = txt;
+    else qEcp.value = txt; // let them verify anyway
+  }catch{}
+}
+
+/* 6) Modal open/close */
+function openModal(){ verifyPop.hidden = false; document.body.style.overflow = 'hidden'; }
+function closeModal(){ verifyPop.hidden = true; document.body.style.overflow = ''; }
+
+verifyPop.addEventListener('click', (e)=>{ if(e.target === verifyPop) closeModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && !verifyPop.hidden) closeModal(); });
+document.getElementById('popClose').addEventListener('click', closeModal);
+
+/* 7) Wire up + init */
+document.getElementById('btnVerify').addEventListener('click', onVerify);
+document.getElementById('btnPaste').addEventListener('click', onPaste);
 loadRecent();
