@@ -54,7 +54,71 @@
     </section>
   </main>
 
-  <!-- Your existing JS (unchanged). Cache-bust if you just edited it. -->
+  <!-- Recent list loader (Supabase REST) -->
+  <script>
+  (async () => {
+    // ❗️UPDATE THESE TWO VALUES
+    const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+
+    const statusEl = document.getElementById('recentStatus');
+    const listEl = document.getElementById('recent');
+
+    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fmt(ts){
+      try {
+        const d = new Date(ts);
+        return isNaN(d) ? ts : d.toLocaleString();
+      } catch { return ts; }
+    }
+
+    const qs = [
+      'select=title,url,hash,"timestamp",timestamp_iso,source',
+      'order=timestamp.desc',
+      'limit=12'
+    ].join('&');
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        cache: 'no-store'
+      });
+
+      if (!res.ok) {
+        statusEl.textContent = `Read error: ${res.status}`;
+        return;
+      }
+
+      const rows = await res.json();
+      if (!rows.length) {
+        statusEl.textContent = 'No records yet.';
+        return;
+      }
+
+      statusEl.textContent = '';
+      listEl.innerHTML = rows.map(r => {
+        const t = esc(r.title);
+        const ts = r.timestamp_iso || r.timestamp || '';
+        const when = ts ? fmt(ts) : '';
+        const hash = r.hash ? `<code class="mono" style="opacity:.7">${esc(r.hash.slice(0, 10))}…</code>` : '';
+        const src = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : '';
+        const title = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${t}</a>` : t;
+        return `<li style="margin:.5rem 0">
+                  <div>${title}${src}</div>
+                  <small class="muted">${esc(when)} ${hash}</small>
+                </li>`;
+      }).join('');
+    } catch (e) {
+      statusEl.textContent = 'Read error.';
+      console.error(e);
+    }
+  })();
+  </script>
+
+  <!-- Your existing JS for verify etc. (leave as-is; cache-bust if needed) -->
   <script type="module" src="/ledger/js/main.hard.js?v=20"></script>
 </body>
 </html>
