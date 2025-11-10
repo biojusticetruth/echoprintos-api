@@ -1,163 +1,109 @@
-/* EchoprintOS ledger JS (v22) */
+/* ====== CONFIG (fill these) ====== */
+const SUPABASE_URL  = 'https://cyndhzyfaffprdebclnw.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+const TABLE_READ    = 'echoprints'; // or 'v_echoprints_public'
 
-/* 1) Config from window (set in index.html) */
-const SUPABASE_URL      = window.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
-const SUBSTACK_HOME     = window.SUBSTACK_HOME || 'https://biojusticetruth.substack.com/';
+/* ====== DOM ====== */
+const el = (id) => document.getElementById(id);
+const $sheet  = el('epv-sheet');
+const $title  = el('epv-title');
+const $rec    = el('epv-record');
+const $ts     = el('epv-ts');
+const $open   = el('epv-open');
 
-/* 2) DOM refs */
-const qEcp   = document.getElementById('q-ecp');
-const qHash  = document.getElementById('q-hash');
-const btnV   = document.getElementById('btnVerify');
-const btnP   = document.getElementById('btnPaste');
-const vRes   = document.getElementById('verifyResult');
+const $ecp    = el('epv-ecp');
+const $hash   = el('epv-hash');
+const $verify = el('epv-verify');
+const $reset  = el('epv-reset');
+const $close  = el('epv-close');
 
-const recentStatus = document.getElementById('recentStatus');
-const recentWrap   = document.getElementById('recent');
+/* ====== Helpers ====== */
+const BASE = `${SUPABASE_URL}/rest/v1`;
+const HEADERS = {
+  apikey: SUPABASE_ANON,
+  Authorization: `Bearer ${SUPABASE_ANON}`,
+};
 
-const verifyPop = document.getElementById('verifyPop');
-const popT  = document.getElementById('popT');
-const popE  = document.getElementById('popECP');
-const popI  = document.getElementById('popISO');
-const popV  = document.getElementById('popView');
-const popX  = document.getElementById('popClose');
-
-/* 3) Helpers */
-const esc = s => (s||'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-const pad = (n,w=2)=>String(n).padStart(w,'0');
-const looksHex64 = s => /^[a-f0-9]{64}$/i.test((s||'').trim());
-
-function isoUTC(ts){
-  try{ const d = new Date(ts); return isNaN(d) ? (ts||'') : d.toISOString().replace('Z','+00:00'); }
-  catch{ return ts||''; }
+function cleanEcp(s) {
+  if (!s) return '';
+  return s.trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');
 }
 
-function ecpFromISO(iso){
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})/.exec(iso||'');
-  if(!m) return '';
-  const [,Y,Mo,D,H,Mi,S,Ms] = m;
-  return `ECP-${Y}${Mo}${D}${H}${Mi}${S}${Ms}`;
+function formatUtc(tsIso) {
+  if (!tsIso) return '—';
+  const d = new Date(tsIso);
+  const w = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()];
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+  const dd = String(d.getUTCDate()).padStart(2,'0');
+  const hh = String(d.getUTCHours()).padStart(2,'0');
+  const mm = String(d.getUTCMinutes()).padStart(2,'0');
+  const ss = String(d.getUTCSeconds()).padStart(2,'0');
+  return `${w}, ${dd} ${m} ${d.getUTCFullYear()} ${hh}:${mm}:${ss} UTC`;
 }
 
-function isoFromECP(ecp){
-  const m = /^ECP-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{3})$/.exec((ecp||'').trim());
-  if(!m) return null;
-  const [,Y,Mo,D,H,Mi,S,Ms] = m;
-  return `${Y}-${Mo}-${D}T${H}:${Mi}:${S}.${Ms}+00:00`;
+async function q(url) {
+  const r = await fetch(url, { headers: HEADERS });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  return j[0] || null;
 }
 
-/* 4) Recent feed (buttonless cards; title link + Substack chip) */
-async function loadRecent(){
-  recentStatus.textContent = 'Loading…';
-  recentWrap.innerHTML = '';
-
-  const qs = [
-    'select=title,url,"timestamp",timestamp_iso,source',
-    'order=timestamp.desc',
-    'limit=12'
-  ].join('&');
-
-  try{
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      cache: 'no-store'
-    });
-    if(!r.ok){ throw new Error(`Read error: ${r.status}`); }
-    let rows = await r.json();
-
-    // remove obvious test placeholders like "test"
-    rows = rows.filter(row => !/^\s*test\b/i.test(row.title||''));
-
-    if(!rows.length){ recentStatus.textContent = 'No records yet.'; return; }
-    recentStatus.textContent = '';
-
-    recentWrap.innerHTML = rows.map(row => {
-      const title = esc(row.title || 'Untitled');
-      const href  = row.url || SUBSTACK_HOME;
-      const iso   = isoUTC(row.timestamp_iso || row.timestamp || '');
-      const ecp   = ecpFromISO(iso);
-      const src   = (row.source || 'Substack') + '';
-
-      const srcPill = `<a class="pill-src" href="${esc(SUBSTACK_HOME)}" target="_blank" rel="noopener">${esc(src)}</a>`;
-
-      return `
-        <div class="feed-card">
-          <div class="t"><a href="${esc(href)}" target="_blank" rel="noopener">${title}</a>${srcPill}</div>
-          <div class="meta"><span class="k">ECP: </span><span class="v nowrap">${esc(ecp)}</span></div>
-          <div class="meta"><span class="k">TIMESTAMP (UTC): </span><span class="v">${esc(iso)}</span></div>
-        </div>
-      `;
-    }).join('');
-  }catch(err){
-    console.error(err);
-    recentStatus.textContent = 'Read error.';
-  }
+async function getByEcp(ecp) {
+  const u = `${BASE}/${TABLE_READ}?select=title,record_id,hash,timestamp_iso,url,source`
+          + `&record_id=eq.${encodeURIComponent(ecp)}&limit=1`;
+  return q(u);
 }
 
-/* 5) Verify behavior (ECP or full hash) */
-async function onVerify(){
-  vRes.hidden = true; vRes.textContent = '';
+async function getByHash(sha) {
+  const u = `${BASE}/${TABLE_READ}?select=title,record_id,hash,timestamp_iso,url,source`
+          + `&hash=eq.${encodeURIComponent(sha)}&limit=1`;
+  return q(u);
+}
 
-  const ecp  = (qEcp.value||'').trim();
-  const hash = (qHash.value||'').trim();
+function showCert(row) {
+  $title.textContent = row?.title || 'Untitled';
+  $rec.textContent   = row?.record_id || '—';
+  $ts.textContent    = formatUtc(row?.timestamp_iso);
 
-  let qs = null;
-  if (ecp){
-    const iso = isoFromECP(ecp);
-    if(!iso){ return showInline('Invalid ECP format. Use ECP-YYYYMMDDHHMMSSmmm.'); }
-    qs = `select=title,url,"timestamp",timestamp_iso&timestamp=eq.${encodeURIComponent(iso)}&limit=1`;
-  } else if (hash){
-    if(!looksHex64(hash)){ return showInline('Hash must be a full 64-hex SHA-256 value.'); }
-    qs = `select=title,url,"timestamp",timestamp_iso&hash=eq.${encodeURIComponent(hash)}&limit=1`;
+  if (row?.url) {
+    $open.href = row.url;
+    $open.removeAttribute('hidden');
   } else {
-    return showInline('Enter an ECP or a 64-hex hash.');
+    $open.setAttribute('hidden','hidden');
+    $open.removeAttribute('href');
   }
+  $sheet.classList.add('open');
+  document.body.style.overflow='hidden';
+}
 
-  try{
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      cache:'no-store'
-    });
-    if(!r.ok){ throw new Error(`Verify error: ${r.status}`); }
-    const rows = await r.json();
-    if(!rows.length){ return showInline('No matching record.'); }
+function hideCert() {
+  $sheet.classList.remove('open');
+  document.body.style.overflow='';
+}
 
-    const row = rows[0];
-    const iso = isoUTC(row.timestamp_iso || row.timestamp || '');
-    const ecpOut = ecpFromISO(iso);
+/* ====== Wire up ====== */
+$verify.addEventListener('click', async () => {
+  try {
+    const ecp = cleanEcp($ecp.value);
+    const sha = ($hash.value||'').trim();
+    if (!ecp && !sha) { alert('Enter an ECP-… or a full SHA-256 hash.'); return; }
 
-    popT.textContent  = row.title || 'Untitled';
-    popE.textContent  = ecpOut || '(unavailable)';
-    popI.textContent  = iso || '(unknown)';
-    popV.href         = row.url || SUBSTACK_HOME;
-
-    openModal();
-  }catch(err){
+    const row = ecp ? await getByEcp(ecp) : await getByHash(sha);
+    if (!row) { alert('No matching record found.'); return; }
+    showCert(row);
+  } catch (err) {
     console.error(err);
-    showInline('Could not verify right now.');
+    alert('Could not verify right now.');
   }
-}
+});
 
-function showInline(msg){ vRes.textContent = msg; vRes.hidden = false; }
-async function onPaste(){
-  try{
-    const txt = (await navigator.clipboard.readText()).trim();
-    if (!txt) return;
-    if (/^ECP-\d{17}$/.test(txt)) qEcp.value = txt;
-    else if (looksHex64(txt)) qHash.value = txt;
-    else qEcp.value = txt; // let them verify anyway
-  }catch{}
-}
+$reset.addEventListener('click', () => {
+  $ecp.value = '';
+  $hash.value = '';
+  hideCert();
+});
 
-/* 6) Modal open/close */
-function openModal(){ verifyPop.hidden = false; document.body.style.overflow = 'hidden'; }
-function closeModal(){ verifyPop.hidden = true; document.body.style.overflow = ''; }
-
-verifyPop.addEventListener('click', (e)=>{ if(e.target === verifyPop) closeModal(); });
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && !verifyPop.hidden) closeModal(); });
-document.getElementById('popClose').addEventListener('click', closeModal);
-
-/* 7) Wire up + init */
-document.getElementById('btnVerify').addEventListener('click', onVerify);
-document.getElementById('btnPaste').addEventListener('click', onPaste);
-loadRecent();
+$close.addEventListener('click', hideCert);
+$sheet.addEventListener('click', (e) => {
+  if (e.target === $sheet) hideCert();
+});
