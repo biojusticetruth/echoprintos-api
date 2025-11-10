@@ -110,11 +110,14 @@ async function loadRecent(){
   recentGrid.innerHTML = '';
 
   const qs = [
-    'select=title,url,hash,timestamp,timestamp_iso,created_at,created_iso',
-    'order=created_at.desc',
-    'limit=12'
-  ].join('&');
-
+  // include source in the projection so we can filter server-side
+  'select=title,url,hash,timestamp,timestamp_iso,created_at,created_iso,source',
+  // ⬇️ show ONLY rows that came from Substack
+  'source=eq.Substack',
+  'order=created_at.desc',
+  'limit=12'
+].join('&');
+  
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers:H, cache:'no-store' });
     if (!res.ok){ recentStatus.textContent = `Read error: ${res.status}`; return; }
