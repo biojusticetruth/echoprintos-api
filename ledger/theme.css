@@ -1,190 +1,44 @@
-/* =========================================================
-   EchoprintOS / BioJustice — theme.css (clean baseline)
-   Replace your existing CSS with this entire file.
-   ========================================================= */
-
-/* ---------- 1) Root tokens ---------- */
-:root {
-  /* Surface & frame */
-  --bg-0: #0B0F12;
-  --bg-1: #10161B;
-  --bg-2: #0e151b;
-  --panel: rgba(16, 22, 27, .88);
-  --edge: #1f2a33;
-
-  /* Text */
-  --text: #DFE7EE;
-  --muted: #A8B3BD;
-  --subtle: #8FA2AE;
-
-  /* Accents */
-  --glow: #19D3A7;
-  --glow-2: #29D9E7;
-  --chip: #23313A;
-  --chiptext: #9FB3BF;
-
-  /* Radii & shadow */
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --shadow-lg: 0 18px 80px rgba(0,0,0,.55);
-  --shadow-md: 0 10px 40px rgba(0,0,0,.35);
+:root{
+  --bg:#0b1216;
+  --panel:#0f161b;
+  --ring:rgba(99,170,188,.22);
+  --ink:#e6f5f8;
+  --muted:#93bcca;
+  --accent:#1CC467;
 }
-
-/* ---------- 2) Base reset ---------- */
 *{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:
-    radial-gradient(1200px 600px at 12% -5%, #0d2730 0%, var(--bg-0) 45%),
-    radial-gradient(900px 600px at 88% -10%, #1a1030 0%, var(--bg-0) 40%),
-    var(--bg-0);
-  color:var(--text);
-  font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,ui-sans-serif,system-ui}
+.wrap{max-width:980px;margin:40px auto;padding:0 20px}
 
-/* Links */
-a{color:var(--glow-2); text-decoration:none}
-a:hover{text-decoration:underline}
+.card{background:linear-gradient(180deg,var(--panel),#0a1216);
+  border:1px solid var(--ring);border-radius:28px;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.35)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+h2{font:700 44px/1.1 "Playfair Display",ui-serif,Georgia;margin:0}
+.reset{border:1px solid var(--ring);background:transparent;color:var(--ink);
+  border-radius:999px;padding:10px 16px;cursor:pointer}
+.oval{border:1px solid var(--ring);border-radius:9999px;padding:22px 22px;margin:16px 0}
+.field{width:100%;border:0;background:transparent;color:var(--ink);outline:none;font-size:18px}
+.field::placeholder{color:#7aa2af}
+.cta{display:inline-block;background:var(--accent);color:#06100d;border:0;border-radius:999px;
+  padding:20px 26px;font:700 18px ui-sans-serif;cursor:pointer}
+.hint{color:var(--muted);margin:16px 0 6px}
+blockquote{border-left:6px solid #2ee0ad;padding-left:14px;color:#d8f5ee;margin:10px 0;font-style:italic}
+.foot{color:var(--muted);margin-top:6px}
 
-/* ---------- 3) Layout helpers ---------- */
-.wrap{max-width:940px; margin:40px auto; padding:20px}
-.section{margin:28px 0}
-.row{display:flex; gap:14px; flex-wrap:wrap; align-items:center}
-.stack{display:flex; flex-direction:column; gap:16px}
-.right{margin-left:auto}
-.center{justify-content:center}
-
-/* Typography */
-.h1{font-size:38px; font-weight:800; margin:0 0 12px; letter-spacing:.01em}
-.h2{font-size:26px; font-weight:800; margin:0 0 10px}
-.subtle{color:var(--muted)}
-.kicker{display:inline-block; font-size:12px; letter-spacing:.12em; color:var(--subtle)}
-
-/* ---------- 4) Cards ---------- */
-.card{
-  background:linear-gradient(180deg, rgba(18,25,31,.88), rgba(12,18,23,.88));
-  border:1px solid var(--edge);
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-md);
-  padding:26px;
-}
-.card.soft{background:linear-gradient(180deg, rgba(16,22,27,.82), rgba(12,18,23,.82))}
-
-/* ---------- 5) Inputs ---------- */
-.pill{
-  flex:1 1 360px;
-  background:var(--bg-2);
-  border:1px solid #1d2a33;
-  color:var(--text);
-  border-radius:999px;
-  padding:16px 20px;
-  outline:none;
-  transition:border-color .15s ease, box-shadow .15s ease;
-}
-.pill::placeholder{color:#667786}
-.pill:focus{
-  border-color:#255a63;
-  box-shadow:0 0 0 3px rgba(25,211,167,.18);
-}
-
-/* ---------- 6) Buttons ---------- */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:10px; border:0; cursor:pointer; font-weight:700;
-  padding:16px 22px; border-radius:999px; transition:transform .06s ease, opacity .15s ease;
-}
-.btn:active{transform:translateY(1px)}
-.btn[disabled]{opacity:.6; cursor:not-allowed}
-
-.btn-primary{
-  background:linear-gradient(90deg,#17caa1,#19d3a7);
-  color:#052321;
-}
-.btn-ghost{
-  background:#0f171d; color:var(--text); border:1px solid #223039;
-}
-.btn-small{padding:8px 12px; font-weight:600}
-
-/* ---------- 7) Chips / badges ---------- */
-.badge{
-  display:inline-block; background:var(--chip); color:var(--chiptext);
-  padding:4px 10px; border-radius:999px; font-size:12px; letter-spacing:.02em
-}
-.tag{background:#112028; border:1px solid #21313a; color:#b8c5cf; padding:2px 8px; border-radius:999px; font-size:12px}
-
-/* ---------- 8) Verification block ---------- */
-.verify-card .header{display:flex; align-items:center; gap:10px; margin-bottom:10px}
-.verify-card .reset-btn{margin-left:auto}
-
-.hint{color:#a3b0ba}
-.quote{padding-left:12px; border-left:3px solid var(--glow); color:#b8c5cf; font-style:italic}
-
-/* ---------- 9) Modal (certificate) ---------- */
-.backdrop{
-  position:fixed; inset:0; background:rgba(3,8,12,.55);
-  backdrop-filter: blur(6px); display:none; z-index:999;
-}
-.modal{
-  position:fixed; left:50%; top:48%; transform:translate(-50%,-50%);
-  width:min(720px,92vw);
-  background:linear-gradient(180deg,#0f161c,#0b1116);
-  border:1px solid #22313a; border-radius:18px; box-shadow:var(--shadow-lg);
-  display:none; z-index:1000;
-}
-.modal .head{
-  display:flex; align-items:center; gap:10px; padding:18px 20px;
-  border-bottom:1px solid #1c2730;
-}
-.modal .title{font-size:20px; font-weight:800; letter-spacing:.02em}
-.modal .body{padding:18px 20px 22px}
-.modal .kv{margin:14px 0}
-.modal .k{color:#9db0bb; font-weight:700; letter-spacing:.04em}
-.modal .v{margin-top:6px; word-break:break-word}
-.modal .hr{height:1px; background:#18222b; margin:14px 0 8px}
-.linkBtn, .closeX{
-  border:1px solid #2a3943; background:#111a20; color:var(--text);
-  border-radius:999px; padding:10px 14px; cursor:pointer; text-decoration:none
-}
-.linkBtn{margin-left:auto}
-.footerNote{color:#9fb2bd; margin-top:8px}
-.hidden{display:none!important}
-
-/* ---------- 10) Feed cards ---------- */
-.feed{display:grid; grid-template-columns:1fr; gap:14px}
-@media (min-width:680px){ .feed{grid-template-columns:1fr 1fr} }
-.feed-card{
-  background:linear-gradient(180deg, rgba(17,23,28,.88), rgba(12,18,23,.88));
-  border:1px solid var(--edge); border-radius:18px; padding:16px 16px 14px;
-}
-.feed-title{font-weight:700; margin:4px 0 6px; line-height:1.35}
-.feed-meta{display:flex; align-items:center; gap:8px; color:#9db0bb; font-size:13px}
-.feed .substack{background:#15323a; color:#84dfe6}
-
-/* ---------- 11) Nav / Tabs (optional) ---------- */
-.nav{position:sticky; top:0; z-index:50; background:rgba(11,15,18,.65); backdrop-filter: blur(8px); border-bottom:1px solid #132028}
-.nav .inner{max-width:940px; margin:0 auto; padding:10px 20px; display:flex; gap:16px; align-items:center}
-.tab{padding:8px 12px; border-radius:999px; color:#b9c7d0}
-.tab.active{background:#0f1a1f; color:var(--text); border:1px solid #25333c}
-
-/* ---------- 12) Hero (optional header text) ---------- */
-.hero{margin:14px 0 24px}
-.hero-title{font-size:42px; font-weight:800; margin:0 0 8px}
-.hero-sub{color:var(--muted); max-width:70ch}
-
-/* ---------- 13) Utilities ---------- */
-.mt-0{margin-top:0} .mt-8{margin-top:8px} .mt-16{margin-top:16px}
-.mb-0{margin-bottom:0} .mb-8{margin-bottom:8px} .mb-16{margin-bottom:16px}
-.p-0{padding:0} .p-8{padding:8px} .p-16{padding:16px} .p-24{padding:24px}
-.w-100{width:100%}
-.bold{font-weight:700}
-
-/* ---------- 14) Responsive tweaks ---------- */
-@media (max-width:480px){
-  .h1{font-size:30px}
-  .hero-title{font-size:34px}
-  .wrap{padding:14px}
-  .card{padding:20px}
-  .btn{width:100%}
-}
+/* modal */
+.sheet{position:fixed;inset:0;background:rgba(3,6,8,.48);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:9999}
+.sheet.open{display:flex}
+.sheetcard{width:min(760px,92vw);background:linear-gradient(180deg,var(--panel),#0a1216);
+  border:1px solid var(--ring);border-radius:22px;padding:22px;box-shadow:0 18px 70px rgba(0,0,0,.55)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chip{font:700 12px/1 ui-sans-serif;letter-spacing:.08em;color:#9fbed0;background:#0b1419;
+  border:1px solid var(--ring);padding:8px 12px;border-radius:999px}
+.link{border:1px solid var(--ring);background:#0f171c;color:#d8ecf3;padding:10px 14px;border-radius:999px;text-decoration:none}
+.close{border:1px solid var(--ring);background:transparent;color:#d8ecf3;padding:10px 12px;border-radius:999px;cursor:pointer;margin-left:8px}
+.actions{display:flex;gap:8px}
+.rule{border:0;border-top:1px solid var(--ring);margin:12px 0}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:10px;padding:6px 0}
+.k{color:#8fb2bf;text-transform:uppercase;font:700 12px/1.2 ui-sans-serif;letter-spacing:.08em}
+.v{color:var(--ink);word-break:break-word}
+.cert-foot{color:#b5d3de;margin-top:12px}
