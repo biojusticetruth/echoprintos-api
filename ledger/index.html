@@ -4,52 +4,42 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./theme.css?v=23" />
+  <link rel="stylesheet" href="./theme.css?v=24" />
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- Top Nav (glass) -->
   <header class="nav">
     <div class="wrap">
       <div class="row">
+        <!-- Brand goes to echoprintos.org -->
         <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
-        <a class="pill disabled" aria-disabled="true" style="pointer-events:none;opacity:.55">About</a>
+        <a href="/about/">About</a>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- Hero -->
-    <section class="card glass edge glow-corners sheen">
-      <span class="pill">LEDGER</span>
-      <h1 class="display">EchoprintOS Provenance Layer</h1>
-      <p class="lead">
-        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
-        network that preserves authorship integrity across systems. Each Echoprint is a
-        verifiable record of care: hashed, timestamped, and stored transparently.
-      </p>
-    </section>
 
-    <!-- Verification -->
+    <!-- Verification (only card at top) -->
     <section class="card glass sheen">
-      <h2 style="display:flex;align-items:center;justify-content:space-between">
-        Verification
-        <button id="btnReset" class="btn outline reset-chip" type="button">Reset</button>
-      </h2>
-
-      <div class="stack">
-        <input id="inpEcp"  type="text" inputmode="text" autocomplete="off"
-               placeholder="EchoprintOS Record ID (ECP-…)" />
-        <input id="inpHash" type="text" inputmode="text" autocomplete="off"
-               placeholder="Or enter full SHA-256 hash" />
-        <button id="btnVerify" class="btn primary" type="button">Verify Record</button>
-        <button id="btnPaste"  class="btn paste"   type="button">Paste</button>
+      <div class="bar">
+        <h2>Verification</h2>
+        <button id="btnReset" class="btn outline small">Reset</button>
       </div>
 
-      <!-- (No result box here anymore; verify pops out as an overlay card) -->
-      <p class="tip muted" style="margin-top:8px">
-        Verify by <span class="mono">EchoprintOS Record ID</span> or full <span class="mono">64-hex</span> hash.
+      <div class="verify-row">
+        <input id="ecp" type="text" inputmode="text" autocomplete="off"
+               placeholder="EchoprintOS Record ID (ECP-…)" />
+        <input id="hash" type="text" inputmode="text" autocomplete="off"
+               placeholder="Or enter full SHA-256 hash" />
+        <button id="btnVerify" class="btn primary">Verify Record</button>
+        <button id="btnPaste"  class="btn ghost">Paste</button>
+      </div>
+
+      <p class="muted" style="margin-top:.5rem">
+        Verify by EchoprintOS Record ID or 64-hex hash.
       </p>
     </section>
 
@@ -57,11 +47,134 @@
     <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
-      <div id="recentGrid" class="grid" aria-live="polite"></div>
+      <ul id="recent" class="feed"></ul>
     </section>
   </main>
 
-  <!-- Page logic -->
-  <script type="module" src="/ledger/js/main.hard.js?v=23"></script>
+  <!-- Page JS (REST only; no DB functions needed) -->
+  <script>
+  // --- Supabase REST setup (read-only) ---
+  const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
+  const SUPABASE_ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+  const HDR = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+
+  // --- helpers ---
+  const $ = s => document.querySelector(s);
+  const esc = s => (s ?? '').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+  // controls
+  const ecpInput  = $('#ecp');
+  const hashInput = $('#hash');
+  $('#btnReset').onclick = () => { ecpInput.value=''; hashInput.value=''; };
+  $('#btnPaste').onclick  = async () => { try {
+    const t = (await navigator.clipboard.readText()).trim();
+    if (!t) return;
+    (/^ECP-\d{14,}$/.test(t) ? ecpInput : hashInput).value = t;
+  } catch(_){} };
+
+  // verify
+  $('#btnVerify').onclick = async () => {
+    const ecp = ecpInput.value.trim();
+    const hex = hashInput.value.trim();
+    let qs = 'select=title,url,hash,timestamp_iso,ecp_record_id,record_id';
+    if (ecp && /^ECP-\d{14,}$/.test(ecp)) {
+      qs += `&ecp_record_id=eq.${encodeURIComponent(ecp)}`;
+    } else if (hex && /^[a-f0-9]{64}$/i.test(hex)) {
+      qs += `&hash=eq.${encodeURIComponent(hex.toLowerCase())}`;
+    } else {
+      return showPop('Nothing to verify',
+        'Enter an EchoprintOS Record ID (ECP-…) or a full 64-hex SHA-256 hash.');
+    }
+
+    try {
+      const res  = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers: HDR, cache: 'no-store' });
+      const rows = await res.json();
+      if (!res.ok || !rows.length) return showPop('Not found', 'No matching Echoprint was found.');
+      renderVerify(rows[0]);
+    } catch {
+      showPop('Network error', 'Could not reach the ledger.');
+    }
+  };
+
+  // pop-out “certificate”
+  function renderVerify(r){
+    const title = r.title || '(untitled)';
+    const when  = r.timestamp_iso ? new Date(r.timestamp_iso).toISOString() : '';
+    const url   = r.url;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'verify-pop';
+    wrap.innerHTML = `
+      <div class="echocard">
+        <div class="topline">
+          <h3 class="cardtitle">Verified via EchoprintOS</h3>
+          <div class="actions">
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn small outline">View</a>` : ''}
+            <button class="btn small ghost" data-close>Close</button>
+          </div>
+        </div>
+
+        <div class="kv"><div class="k">TITLE</div><div class="v">${esc(title)}</div></div>
+        <div class="kv"><div class="k">EchoprintOS Record ID</div><div class="v mono">${esc(r.ecp_record_id || '—')}</div></div>
+        <div class="kv"><div class="k">SHA-256 HASH</div><div class="v mono">${esc(r.hash || '—')}</div></div>
+        <div class="kv"><div class="k">TIMESTAMP (UTC)</div><div class="v mono">${esc(when)}</div></div>
+
+        <div class="note muted">Provenance layer confirmation.</div>
+      </div>
+    `;
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap || e.target.hasAttribute('data-close')) wrap.remove();
+    });
+    document.body.appendChild(wrap);
+  }
+
+  function showPop(title, msg){
+    const wrap = document.createElement('div');
+    wrap.className = 'verify-pop';
+    wrap.innerHTML = `
+      <div class="echocard">
+        <div class="topline">
+          <h3 class="cardtitle">${esc(title)}</h3>
+          <button class="btn small ghost" data-close>Close</button>
+        </div>
+        <p class="muted" style="margin:4px 0 2px">${esc(msg)}</p>
+      </div>`;
+    wrap.addEventListener('click', (e)=>{ if (e.target===wrap || e.target.hasAttribute('data-close')) wrap.remove(); });
+    document.body.appendChild(wrap);
+  }
+
+  // recent feed (hide “Test” junk; only show rows that have URL + title)
+  (async () => {
+    const qs = [
+      'select=title,url,timestamp_iso,ecp_record_id,hash,source',
+      'order=timestamp_iso.desc,nullsLast',
+      'limit=20'
+    ].join('&');
+
+    const res  = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers: HDR, cache:'no-store' });
+    const rows = res.ok ? await res.json() : [];
+    const clean = rows.filter(r =>
+      r.title && r.url &&
+      !/^test\b/i.test(r.title) && (r.source || '').toLowerCase() !== 'test'
+    );
+
+    const list = $('#recent'), status = $('#recentStatus');
+    if (!clean.length){ status.textContent = 'No records yet.'; return; }
+    status.textContent = '';
+
+    list.innerHTML = clean.map(r => {
+      const when = r.timestamp_iso ? new Date(r.timestamp_iso).toLocaleString() : '';
+      const ecp  = r.ecp_record_id ? `<div class="mini mono">${esc(r.ecp_record_id)}</div>` : '';
+      return `<li class="feed-card">
+                <div class="feed-main">
+                  <a class="feed-title" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+                  ${ecp}
+                </div>
+                <div class="feed-meta">${esc(when)}</div>
+              </li>`;
+    }).join('');
+  })();
+  </script>
 </body>
 </html>
