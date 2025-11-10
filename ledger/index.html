@@ -2,11 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>EchoprintOS • Ledger</title>
+  <title>EchoprintOS • BioJustice Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-
   <!-- Single theme file for this folder -->
-  <link rel="stylesheet" href="./theme.css?v=20" />
+  <link rel="stylesheet" href="./theme.css?v=22" />
 </head>
 <body>
 
@@ -23,30 +22,46 @@
   </header>
 
   <main class="wrap">
-    <!-- Hero glass card with shimmer -->
+    <!-- Hero -->
     <section class="card glass edge glow-corners sheen">
-      <span class="pill">LEDGER</span>
-      <h1 class="display">Proof-of-Care Ledger</h1>
-      <p class="lead">Check or confirm authenticity.</p>
+      <span class="pill">ECHOPRINTOS</span>
+      <h1 class="display">BioJustice Ledger</h1>
+      <p class="lead">Canonical archive for the BioJustice Philosophical Framework.</p>
+      <p class="muted">
+        Each entry lists the <strong>EchoprintOS Record ID</strong> (<code class="mono">ECP-YYYYMMDDHHMMSSmmm</code>) and the
+        official <strong>TIMESTAMP (UTC)</strong>. When present, a <em>View</em> button opens the source document.
+        The ledger entry itself is the proof.
+      </p>
+    </section>
+
+    <!-- (Optional) short About block -->
+    <section class="card glass sheen">
+      <h2>About this ledger</h2>
+      <ul style="margin:0; padding-left:1.2rem; line-height:1.6;">
+        <li>Append-only public ledger for the BioJustice Philosophical Framework.</li>
+        <li>Entries are never rewritten. Corrections or updates create new records.</li>
+        <li>Links are for context only; the Echoprint entry is the canonical artifact.</li>
+      </ul>
     </section>
 
     <!-- Verify (glass, stacked on mobile) -->
     <section class="card glass sheen">
       <h2>Verify</h2>
-
       <div class="verify-row">
         <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="ECP-…  or  64-hex hash" />
+               placeholder="64-hex hash or record UUID" />
         <button id="btnVerify" class="btn primary">Verify</button>
         <button id="btnClear"  class="btn outline">Clear</button>
         <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
       </div>
-
       <div id="verifyResult" class="result"></div>
-      <p class="tip">Tip: Paste an <span class="mono">ECP-…</span> or 64-hex hash, then press <em>Verify</em> (or hit ↵).</p>
+      <p class="tip">
+        Verify or look up by <span class="mono">64-hex hash</span> or <span class="mono">record UUID</span>.
+        This tool is a convenience; the canonical artifact is the ledger below.
+      </p>
     </section>
 
-    <!-- Recent (glass) -->
+    <!-- Recent (official markers only) -->
     <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
@@ -57,60 +72,107 @@
   <!-- Recent list loader (Supabase REST) -->
   <script>
   (async () => {
-    // ❗️UPDATE THESE TWO VALUES
+    // ❗️UPDATE THESE TWO VALUES (public anon key is fine)
     const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
     const statusEl = document.getElementById('recentStatus');
-    const listEl = document.getElementById('recent');
+    const listEl   = document.getElementById('recent');
 
-    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function fmt(ts){
+    const esc = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Format UTC like 2025-11-10T01:13:20.032+00:00
+    const toUtcIsoPretty = (x) => {
       try {
-        const d = new Date(ts);
-        return isNaN(d) ? ts : d.toLocaleString();
-      } catch { return ts; }
-    }
+        const d = new Date(x);
+        if (isNaN(d)) return '';
+        const pad = (n, l = 2) => String(n).padStart(l, '0');
+        const y = d.getUTCFullYear();
+        const m = pad(d.getUTCMonth() + 1);
+        const day = pad(d.getUTCDate());
+        const h = pad(d.getUTCHours());
+        const min = pad(d.getUTCMinutes());
+        const s = pad(d.getUTCSeconds());
+        const ms = pad(d.getUTCMilliseconds(), 3);
+        return `${y}-${m}-${day}T${h}:${min}:${s}.${ms}+00:00`;
+      } catch { return ''; }
+    };
 
+    // Build ECP-YYYYMMDDHHMMSSmmm from a UTC time
+    const buildDisplayId = (x) => {
+      try {
+        const d = new Date(x);
+        if (isNaN(d)) return '';
+        const p = (n, l=2) => String(n).padStart(l,'0');
+        return 'ECP-' + [
+          d.getUTCFullYear(),
+          p(d.getUTCMonth()+1),
+          p(d.getUTCDate()),
+          p(d.getUTCHours()),
+          p(d.getUTCMinutes()),
+          p(d.getUTCSeconds()),
+          p(d.getUTCMilliseconds(),3)
+        ].join('');
+      } catch { return ''; }
+    };
+
+    // Ask for official + fallbacks; order with nulls last
     const qs = [
-      'select=title,url,hash,"timestamp",timestamp_iso,source',
-      'order=timestamp.desc',
+      'select=ecp_display_id,created_iso,created_at,timestamp_iso,"timestamp",url,record_id',
+      'order=created_at.desc.nullslast',
+      'order=timestamp.desc.nullslast',
       'limit=12'
     ].join('&');
 
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-        },
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         cache: 'no-store'
       });
-
-      if (!res.ok) {
-        statusEl.textContent = `Read error: ${res.status}`;
-        return;
-      }
+      if (!res.ok) { statusEl.textContent = `Read error: ${res.status}`; return; }
 
       const rows = await res.json();
-      if (!rows.length) {
-        statusEl.textContent = 'No records yet.';
-        return;
-      }
+      if (!rows.length) { statusEl.textContent = 'No records yet.'; return; }
 
       statusEl.textContent = '';
-      listEl.innerHTML = rows.map(r => {
-        const t = esc(r.title);
-        const ts = r.timestamp_iso || r.timestamp || '';
-        const when = ts ? fmt(ts) : '';
-        const hash = r.hash ? `<code class="mono" style="opacity:.7">${esc(r.hash.slice(0, 10))}…</code>` : '';
-        const src = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : '';
-        const title = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${t}</a>` : t;
-        return `<li style="margin:.5rem 0">
-                  <div>${title}${src}</div>
-                  <small class="muted">${esc(when)} ${hash}</small>
-                </li>`;
+      listEl.innerHTML = rows.map((r, i) => {
+        // choose ISO (created_iso > timestamp_iso > computed)
+        const iso = r.created_iso || r.timestamp_iso ||
+                    (r.created_at ? toUtcIsoPretty(r.created_at) :
+                     (r.timestamp ? toUtcIsoPretty(r.timestamp) : ''));
+
+        // display id: use ecp_display_id when present, else derive from ISO
+        const displayId = r.ecp_display_id || buildDisplayId(iso);
+
+        const viewBtn = r.url
+          ? `<a class="btn xs ghost" href="${esc(r.url)}" target="_blank" rel="noopener">View</a>`
+          : '';
+
+        return `
+          <li class="card glass" style="padding:1rem;margin:.6rem 0; position:relative;">
+            <div style="position:absolute; top:1rem; right:1rem;">${viewBtn}</div>
+
+            <div style="font-size:.85rem;letter-spacing:.06em;color:var(--muted);">ECHOPRINTOS RECORD ID</div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin:.25rem 0 .75rem;">
+              <code class="mono" id="rid-${i}">${esc(displayId)}</code>
+              <button class="btn xs ghost copy" data-copy="${esc(displayId)}">Copy</button>
+            </div>
+
+            <div style="font-size:.85rem;letter-spacing:.06em;color:var(--muted);">TIMESTAMP (UTC)</div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin:.25rem 0;">
+              <code class="mono" id="ts-${i}">${esc(iso)}</code>
+              <button class="btn xs ghost copy" data-copy="${esc(iso)}">Copy</button>
+            </div>
+          </li>`;
       }).join('');
+
+      // copy-to-clipboard for IDs and timestamps
+      listEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.copy');
+        if (!btn) return;
+        const val = btn.getAttribute('data-copy');
+        if (val) navigator.clipboard.writeText(val);
+      });
     } catch (e) {
       statusEl.textContent = 'Read error.';
       console.error(e);
@@ -118,7 +180,7 @@
   })();
   </script>
 
-  <!-- Your existing JS for verify etc. (leave as-is; cache-bust if needed) -->
-  <script type="module" src="/ledger/js/main.hard.js?v=20"></script>
+  <!-- Verify logic (keep your file; we only changed the placeholder text above) -->
+  <script type="module" src="/ledger/js/main.hard.js?v=22"></script>
 </body>
 </html>
