@@ -57,6 +57,13 @@ function render(rows, listEl){
 
 async function loadFeed(){
   const listEl = document.querySelector('#feed-list') || document.querySelector('#recent');
+  // put near the top of your JS
+const setStat = (text) => {
+  ['#feed-stat', '#recentStatus'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (el) el.textContent = text;
+  });
+};
   
   if (!listEl) return;
 
