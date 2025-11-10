@@ -4,79 +4,24 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./theme.css?v=20" />
-
-  <!-- Page-local tweaks only (do not touch global theme). -->
-  <style>
-    /* Lighter hero card so the page isn’t top-heavy */
-    .hero.glass {
-      background: radial-gradient(120% 140% at 0% 0%, rgba(64,255,214,.08), rgba(0,0,0,0)) ,
-                  radial-gradient(120% 140% at 100% 0%, rgba(255,64,255,.08), rgba(0,0,0,0));
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,.08);
-    }
-    /* Verify block */
-    .verify .btn.primary { font-weight: 700; }
-    .btn.paste {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.08);
-    }
-    .btn.paste:hover { transform: translateY(-1px); }
-    .reset-chip { float:right; opacity:.8 }
-    /* Recent grid as cards with gentle glow */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-      gap: 14px;
-    }
-    .echocard {
-      min-height: 150px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      background: rgba(255,255,255,.03);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 14px;
-      padding: 14px 16px;
-      transition: box-shadow .25s, transform .25s, background .25s;
-    }
-    .echocard:hover {
-      transform: translateY(-2px);
-      box-shadow:
-        0 0 0 1px rgba(64,255,214,.15),
-        0 10px 24px rgba(0,0,0,.35);
-      background: rgba(255,255,255,.04);
-    }
-    .echocard a.title {
-      color: var(--link, #9fe9d3);
-      text-decoration: none;
-      font-weight: 600;
-      pointer-events: auto;
-    }
-    .echocard a.title:hover { text-decoration: underline; }
-    .muted { opacity:.7 }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    /* Put Clear/Reset in the header line and keep inputs clean */
-    .verify h2 { display:flex; align-items:center; justify-content:space-between; }
-    .pill.disabled { pointer-events:none; opacity:.5 }
-  </style>
+  <link rel="stylesheet" href="./theme.css?v=23" />
 </head>
 <body>
 
-  <!-- Top Nav (glass) -->
+  <!-- Top Nav -->
   <header class="nav">
     <div class="wrap">
       <div class="row">
         <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
-        <a class="pill disabled" aria-disabled="true" title="Coming soon">About</a>
+        <a class="pill disabled" aria-disabled="true" style="pointer-events:none;opacity:.55">About</a>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- Hero card -->
-    <section class="card glass edge glow-corners sheen hero">
+    <!-- Hero -->
+    <section class="card glass edge glow-corners sheen">
       <span class="pill">LEDGER</span>
       <h1 class="display">EchoprintOS Provenance Layer</h1>
       <p class="lead">
@@ -87,28 +32,28 @@
     </section>
 
     <!-- Verification -->
-    <section class="card glass sheen verify">
-      <h2>
+    <section class="card glass sheen">
+      <h2 style="display:flex;align-items:center;justify-content:space-between">
         Verification
-        <button id="btnReset" class="btn outline reset-chip" type="button" title="Reset">Reset</button>
+        <button id="btnReset" class="btn outline reset-chip" type="button">Reset</button>
       </h2>
 
       <div class="stack">
-        <input id="inpEcp" type="text" inputmode="text" autocomplete="off"
+        <input id="inpEcp"  type="text" inputmode="text" autocomplete="off"
                placeholder="EchoprintOS Record ID (ECP-…)" />
         <input id="inpHash" type="text" inputmode="text" autocomplete="off"
                placeholder="Or enter full SHA-256 hash" />
         <button id="btnVerify" class="btn primary" type="button">Verify Record</button>
-        <button id="btnPaste" class="btn paste" type="button">Paste</button>
+        <button id="btnPaste"  class="btn paste"   type="button">Paste</button>
       </div>
 
-      <div id="verifyResult" class="result" style="margin-top:12px"></div>
+      <!-- (No result box here anymore; verify pops out as an overlay card) -->
       <p class="tip muted" style="margin-top:8px">
         Verify by <span class="mono">EchoprintOS Record ID</span> or full <span class="mono">64-hex</span> hash.
       </p>
     </section>
 
-    <!-- Recent (cards) -->
+    <!-- Recent feed -->
     <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
@@ -116,7 +61,7 @@
     </section>
   </main>
 
-  <!-- Page logic (REST → Supabase) -->
-  <script type="module" src="/ledger/js/main.hard.js?v=21"></script>
+  <!-- Page logic -->
+  <script type="module" src="/ledger/js/main.hard.js?v=23"></script>
 </body>
 </html>
