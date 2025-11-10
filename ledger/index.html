@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./theme.css?v=21" />
+  <link rel="stylesheet" href="./theme.css?v=22" />
 </head>
 <body>
 
@@ -21,183 +21,81 @@
 
   <main class="wrap">
 
-    <!-- HERO / Provenance -->
+    <!-- Hero / Provenance -->
     <section class="card glass edge glow-corners sheen hero-card">
       <span class="pill">LEDGER</span>
       <h1 class="display">EchoprintOS Provenance Layer</h1>
       <p class="lead">
-        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
-        network that preserves authorship integrity across systems. Each Echoprint is
-        a verifiable record of care: hashed, timestamped, and stored transparently.
+        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping network that preserves
+        authorship integrity across systems. Each Echoprint is a verifiable record of care: hashed, timestamped,
+        and stored transparently.
       </p>
     </section>
 
-    <!-- Verification -->
+    <!-- Verification (STATIC; never sticky or moving) -->
     <section class="card glass" id="verifyCard">
-      <div class="verify-head">
-        <h2>Verification</h2>
-        <button class="btn outline" id="btnReset">Reset</button>
-      </div>
+      <h2>Verification</h2>
 
       <div class="verify-row">
-        <input id="ecp" type="text" inputmode="text" autocomplete="off"
-               placeholder="EchoprintOS Record ID (ECP-…)" />
-        <input id="hex" type="text" inputmode="text" autocomplete="off"
-               placeholder="Or enter full SHA-256 hash" />
+        <input id="q-ecp" type="text" inputmode="text" autocomplete="off"
+               placeholder="EchoprintOS Record ID (ECP-YYYYMMDDHHMMSSmmm)" />
+        <input id="q-hash" type="text" inputmode="text" autocomplete="off"
+               placeholder="or paste a full 64-hex SHA-256 hash" />
         <button id="btnVerify" class="btn primary">Verify Record</button>
-        <button id="btnPaste"  class="btn ghost">Paste</button>
+        <button id="btnPaste"  class="btn outline">Paste</button>
       </div>
 
-      <p class="muted verify-foot">
-        Verified by EchoprintOS Provenance Layer
-        <br>
-        <span class="quote">“Care must be coded. Kindness doesn't emerge by accident — it has to be entered into the system.”</span>
-      </p>
+      <p class="verify-note">Verified by EchoprintOS Provenance Layer</p>
+      <blockquote class="bio-quote">“Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”</blockquote>
+
+      <div id="verifyResult" class="result" hidden></div>
     </section>
 
-    <!-- Recent list -->
+    <!-- Recent (buttonless, clickable title + Substack pill link) -->
     <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
-      <ul id="recent" class="recent-grid"></ul>
+      <div id="recent" class="feed-grid" aria-live="polite"></div>
     </section>
   </main>
 
-  <!-- Verify pop-out -->
-  <div id="verifyPop" class="verify-pop" hidden>
-    <div class="echocard">
+  <!-- Verify pop-out (modal) -->
+  <div id="verifyPop" class="verify-pop" hidden aria-hidden="true">
+    <div class="echocard" role="dialog" aria-labelledby="vcTitle" aria-modal="true">
       <div class="topline">
-        <strong class="title mono" id="popTitle">Echoprint Certificate</strong>
-        <div>
-          <a id="popView" class="btn outline" target="_blank" rel="noopener">View</a>
+        <strong id="vcTitle" class="title mono">Echoprint Certificate</strong>
+        <div class="actions">
+          <a id="popView" class="btn ghost sm" target="_blank" rel="noopener">Open on Substack</a>
           <button id="popClose" class="close">Close</button>
         </div>
       </div>
+      <hr class="line" />
       <div class="kv">
         <div class="k">TITLE</div>
         <div class="v" id="popT"></div>
 
         <div class="k">EchoprintOS Record ID</div>
-        <div class="v mono" id="popECP"></div>
+        <div class="v mono nowrap" id="popECP"></div>
 
         <div class="k">TIMESTAMP (UTC)</div>
         <div class="v mono" id="popISO"></div>
       </div>
-      <div class="muted small" style="margin-top:.75rem">
+      <div class="muted small" style="margin-top:.9rem">
         Verified through the EchoprintOS Provenance Layer.
       </div>
     </div>
   </div>
 
-  <!-- Minimal JS (inline for easy paste) -->
+  <!-- Page settings -->
   <script>
-  // === SETTINGS (fill your values) ===========================================
-  const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
-  // Fallback link for items that have no per-post URL:
-  const SUBSTACK_FALLBACK_URL = 'https://substack.com/@biojusticetruth';
-
-  // === Helpers ================================================================
-  const H = {
-    esc: (s) => (s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])),
-    isoUTC: (x) => {
-      if (!x) return '';
-      try { return new Date(x).toISOString().replace('Z','+00:00'); }
-      catch { return String(x); }
-    },
-    headers: () => ({ apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` })
-  };
-
-  // === Recent feed ============================================================
-  async function loadRecent(){
-    const statusEl = document.getElementById('recentStatus');
-    const listEl   = document.getElementById('recent');
-
-    const qs = [
-      'select=title,url,record_id,timestamp,timestamp_iso,source',
-      'order=timestamp.desc',
-      'limit=12'
-    ].join('&');
-
-    try{
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-        headers: H.headers(), cache: 'no-store'
-      });
-      if(!res.ok){ statusEl.textContent = `Read error: ${res.status}`; return; }
-      const rows = await res.json();
-      if(!rows.length){ statusEl.textContent = 'No records yet.'; return; }
-      statusEl.textContent = '';
-
-      listEl.innerHTML = rows.map(r => {
-        const t = H.esc(r.title || 'Untitled');
-        const iso = H.isoUTC(r.timestamp_iso || r.timestamp);
-        const ecp = H.esc(r.record_id || '');
-        const href = r.url || SUBSTACK_FALLBACK_URL;
-        return `
-          <li class="recent-card sheen">
-            <div class="rc-title"><a href="${H.esc(href)}" target="_blank" rel="noopener">${t}</a></div>
-            <div class="rc-meta">
-              <span class="mono">${ecp}</span>
-              <span class="dot">•</span>
-              <span class="mono">${iso}</span>
-            </div>
-            <div class="rc-actions">
-              <a class="btn outline" href="${H.esc(href)}" target="_blank" rel="noopener">View</a>
-            </div>
-          </li>`;
-      }).join('');
-    }catch(e){
-      console.error(e);
-      statusEl.textContent = 'Read error.';
-    }
-  }
-
-  // === Verify ================================================================
-  const $ = (id) => document.getElementById(id);
-
-  async function verify(){
-    const ecp = $('ecp').value.trim();
-    const hex = $('hex').value.trim();
-    if(!ecp && !hex){ return; }
-
-    let qs = 'select=title,url,record_id,timestamp,timestamp_iso';
-    if(ecp)      qs += `&record_id=eq.${encodeURIComponent(ecp)}`;
-    else if(hex) qs += `&hash=eq.${encodeURIComponent(hex)}`;
-
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-      headers: H.headers(), cache: 'no-store'
-    });
-    if(!res.ok){ alert('Lookup error: ' + res.status); return; }
-    const rows = await res.json();
-    if(!rows.length){ alert('No matching record.'); return; }
-
-    const r = rows[0];
-    $('popTitle').textContent = 'Echoprint Certificate';
-    $('popT').textContent   = r.title || 'Untitled';
-    $('popECP').textContent = r.record_id || '';
-    $('popISO').textContent = H.isoUTC(r.timestamp_iso || r.timestamp);
-    $('popView').href       = r.url || SUBSTACK_FALLBACK_URL;
-
-    $('verifyPop').hidden = false;
-  }
-
-  // === Wire up ===============================================================
-  window.addEventListener('DOMContentLoaded', () => {
-    loadRecent();
-
-    $('btnVerify').addEventListener('click', verify);
-    $('btnPaste').addEventListener('click', async () => {
-      try{
-        const txt = await navigator.clipboard.readText();
-        // prefer filling whichever input is focused, else ECP
-        const active = document.activeElement && ['ecp','hex'].includes(document.activeElement.id)
-          ? document.activeElement : $('ecp');
-        active.value = txt.trim();
-      }catch{}
-    });
-    $('btnReset').addEventListener('click', () => { $('ecp').value=''; $('hex').value=''; });
-    $('popClose').addEventListener('click', () => { $('verifyPop').hidden = true; });
-  });
+    // Set this to your Substack home:
+    window.SUBSTACK_HOME = 'https://biojusticetruth.substack.com/';
+    // Supabase (anon key can be public)
+    window.SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
+    window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
   </script>
+
+  <!-- Behavior -->
+  <script src="/ledger/js/main.hard.js?v=22" type="module"></script>
 </body>
 </html>
