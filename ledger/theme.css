@@ -146,3 +146,22 @@ body::after{
   .card.glass:hover{ transform:none }
   .card.glass.sheen:hover::after{ animation:none }
 }
+
+.echocard{
+  margin:10px 0; padding:12px 14px; border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.echocard:hover{
+  transform: translateY(-2px);
+  border-color: rgba(32,227,178,.35);
+  box-shadow: 0 18px 40px rgba(0,0,0,.36), 0 0 0 1px rgba(32,227,178,.15) inset;
+}
+.echocard .row1{ font-weight:600; }
+.echocard .row2{ margin:.15rem 0 .25rem; }
+.pill{ display:inline-block; font-size:.75rem; margin-left:.4rem;
+  padding:.1rem .4rem; border-radius:999px;
+  background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
+}
