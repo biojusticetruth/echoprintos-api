@@ -60,7 +60,6 @@ async function loadFeed(){
   const statEl = document.querySelector('#feed-stat') || document.querySelector('#recentStatus');
 
   if (!listEl) return;
-  if (statEl) statEl.textContent = 'Loading…';
 
   try{
     const r = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${FEED_QS}`, {
@@ -79,7 +78,7 @@ async function loadFeed(){
       render([], listEl);
       return;
     }
-    if (statEl) statEl.textContent = String(rows.length);
+    
     render(rows, listEl);
   }catch(err){
     if (statEl) statEl.textContent = 'Error';
