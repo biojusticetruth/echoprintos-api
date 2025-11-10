@@ -243,3 +243,7 @@ header a[href*="/ledger"]:focus-visible{
   opacity: .85;
   word-break: break-all; /* long IDs wrap cleanly */
 }
+
+.fc-meta { color:#6b7280; font-size:.92rem; }
+.fc-ids .idline { color:#6b7280; font-size:.86rem; line-height:1.35; overflow-wrap:anywhere; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
