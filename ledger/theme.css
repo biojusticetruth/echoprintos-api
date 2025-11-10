@@ -247,3 +247,17 @@ header a[href*="/ledger"]:focus-visible{
 .fc-meta { color:#6b7280; font-size:.92rem; }
 .fc-ids .idline { color:#6b7280; font-size:.86rem; line-height:1.35; overflow-wrap:anywhere; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Feed card title links — use accent green */
+.feed-card a.fc-title {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+.feed-card a.fc-title:visited { color: var(--accent); }
+.feed-card a.fc-title:hover,
+.feed-card a.fc-title:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  outline: none;
+}
