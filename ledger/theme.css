@@ -264,19 +264,3 @@ header a[href*="/ledger"]:focus-visible{
 
 /* Keep title on its own line */
 .fc-title { display:block; }
-
-/* Feed card hover: gentle lift + glow */
-.feed-card{
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
-  border-radius: 16px;
-}
-.feed-card:hover,
-.feed-card:focus-within{
-  transform: translateY(-2px);
-  background: rgba(255,255,255,.04);
-  box-shadow:
-    0 12px 28px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.06) inset,
-    0 0 0 1px rgba(32,227,178,.22);
-  border-color: rgba(32,227,178,.35);
-}
