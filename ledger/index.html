@@ -4,9 +4,27 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-
-  <!-- Single theme file for this folder -->
-  <link rel="stylesheet" href="./theme.css?v=20" />
+  <link rel="stylesheet" href="./theme.css?v=21" />
+  <style>
+    /* Light touch layout just for the verify block & chips */
+    .verify-card { position: relative; }
+    .reset-chip {
+      position: absolute; right: 1rem; top: 1rem;
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .45rem .9rem; border-radius: 1.5rem;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      font-weight: 500; cursor: pointer;
+    }
+    .verify-grid { display: grid; gap: .8rem; margin-top: .25rem; }
+    .btn-wide { width: 100%; }
+    .btn-dark {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--ink-0,#fff);
+    }
+    .muted-small { opacity:.7; font-size:.9rem; }
+  </style>
 </head>
 <body>
 
@@ -14,9 +32,8 @@
   <header class="nav">
     <div class="wrap">
       <div class="row">
-        <a class="brand" href="/">EchoprintOS</a>
+        <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
-        <a href="/capture/">Capture</a>
         <a href="/about/">About</a>
       </div>
     </div>
@@ -27,23 +44,36 @@
     <section class="card glass edge glow-corners sheen">
       <span class="pill">LEDGER</span>
       <h1 class="display">Proof-of-Care Ledger</h1>
-      <p class="lead">Check or confirm authenticity.</p>
+      <p class="lead">
+        Public timestamp ledger for the <strong>BioJustice</strong> ecosystem.
+        Each entry records the <strong>EchoprintOS Record ID</strong> and the official
+        <strong>Timestamp (UTC)</strong>. The verifier below is a convenience;
+        the canonical artifact is the ledger itself.
+      </p>
     </section>
 
-    <!-- Verify (glass, stacked on mobile) -->
-    <section class="card glass sheen">
-      <h2>Verify</h2>
+    <!-- Verification -->
+    <section class="card glass sheen verify-card">
+      <h2>Verification</h2>
+      <!-- Reset chip (uses the same #btnClear id the original script expects) -->
+      <button id="btnClear" class="reset-chip" title="Reset">
+        <span>⟲</span><span>Reset</span>
+      </button>
 
-      <div class="verify-row">
+      <div class="verify-grid">
+        <!-- Keep #q so existing verify script continues to work -->
         <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="ECP-…  or  64-hex hash" />
-        <button id="btnVerify" class="btn primary">Verify</button>
-        <button id="btnClear"  class="btn outline">Clear</button>
-        <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
-      </div>
+               placeholder="EchoprintOS Record ID (ECP-…)" />
 
-      <div id="verifyResult" class="result"></div>
-      <p class="tip">Tip: Paste an <span class="mono">ECP-…</span> or 64-hex hash, then press <em>Verify</em> (or hit ↵).</p>
+        <!-- Extra field: full SHA-256 (optional). We bridge this to #q in the helper script. -->
+        <input id="h" type="text" inputmode="text" autocomplete="off"
+               placeholder="Or enter full SHA-256 hash" />
+
+        <button id="btnVerify" class="btn primary btn-wide">Verify Record</button>
+        <button id="btnPaste"  class="btn btn-dark btn-wide" title="Paste from clipboard">Paste</button>
+
+        <div id="verifyResult" class="result"></div>
+      </div>
     </section>
 
     <!-- Recent (glass) -->
@@ -57,68 +87,97 @@
   <!-- Recent list loader (Supabase REST) -->
   <script>
   (async () => {
-    // ❗️UPDATE THESE TWO VALUES (same as before)
+    // ⚙️ Update to your project (same as before)
     const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
     const statusEl = document.getElementById('recentStatus');
     const listEl = document.getElementById('recent');
 
-    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function fmt(ts){
-      try {
+    const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Show UTC explicitly
+    function fmtUTC(ts){
+      try{
         const d = new Date(ts);
-        return isNaN(d) ? ts : d.toLocaleString();
-      } catch { return ts; }
+        if (isNaN(d)) return ts || '';
+        const f = new Intl.DateTimeFormat(undefined,{
+          year:'numeric',month:'2-digit',day:'2-digit',
+          hour:'2-digit',minute:'2-digit',second:'2-digit',
+          hour12:false,timeZone:'UTC'
+        });
+        return f.format(d) + ' UTC';
+      }catch{ return ts || ''; }
     }
 
-    const qs = [
-      'select=title,url,hash,"timestamp",timestamp_iso,source',
-      'order=timestamp.desc',
-      'limit=12'
-    ].join('&');
+    // Try richer select first; fall back to minimal if columns don't exist yet
+    const selects = [
+      'select=title,url,hash,"timestamp",timestamp_iso,source,ecp_record_id,created_iso,created_at&order=created_at.desc',
+      'select=title,url,hash,"timestamp",timestamp_iso,source&order=timestamp.desc'
+    ];
 
-    try {
+    let rows = [];
+    for (const qs of selects){
       const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-        },
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         cache: 'no-store'
       });
-
-      if (!res.ok) {
-        statusEl.textContent = `Read error: ${res.status}`;
-        return;
-      }
-
-      const rows = await res.json();
-      if (!rows.length) {
-        statusEl.textContent = 'No records yet.';
-        return;
-      }
-
-      statusEl.textContent = '';
-      listEl.innerHTML = rows.map(r => {
-        const t = esc(r.title);
-        const ts = r.timestamp_iso || r.timestamp || '';
-        const when = ts ? fmt(ts) : '';
-        const hash = r.hash ? `<code class="mono" style="opacity:.7">${esc(r.hash.slice(0, 10))}…</code>` : '';
-        const src = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : '';
-        const title = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${t}</a>` : t;
-        return `<li style="margin:.5rem 0">
-                  <div>${title}${src}</div>
-                  <small class="muted">${esc(when)} ${hash}</small>
-                </li>`;
-      }).join('');
-    } catch (e) {
-      statusEl.textContent = 'Read error.';
-      console.error(e);
+      if (res.ok) { rows = await res.json(); break; }
     }
+
+    if (!rows.length){
+      statusEl.textContent = 'No records yet.';
+      return;
+    }
+
+    statusEl.textContent = '';
+    listEl.innerHTML = rows.map(r => {
+      const t   = esc(r.title);
+      const url = r.url ? esc(r.url) : '';
+      const titleHtml = url ? `<a href="${url}" target="_blank" rel="noopener">${t}</a>` : t;
+
+      // Prefer ledger-native fields, then fall back
+      const ecp = r.ecp_record_id ? `ECP: <span class="mono">${esc(r.ecp_record_id)}</span>` : '';
+      const tsRaw = r.created_iso || r.timestamp_iso || r.timestamp || r.created_at || '';
+      const when = tsRaw ? fmtUTC(tsRaw) : '';
+      const meta = [ecp, when].filter(Boolean).join(' • ');
+
+      return `<li style="margin:.65rem 0">
+                <div>${titleHtml}${r.source ? ` <span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : ''}</div>
+                <small class="muted muted-small">${meta}</small>
+              </li>`;
+    }).join('');
   })();
   </script>
 
-  <!-- Your existing JS (unchanged). Cache-bust if you just edited it. -->
-  <script type="module" src="/ledger/js/main.hard.js?v=20"></script>
+  <!-- Original verifier logic -->
+  <script type="module" src="/ledger/js/main.hard.js?v=21"></script>
+
+  <!-- Small bridge so the new SHA-256 field (#h) still works with the existing verifier (#q). -->
+  <script>
+    const q = document.getElementById('q');
+    const h = document.getElementById('h');
+    const btnVerify = document.getElementById('btnVerify');
+    const btnPaste  = document.getElementById('btnPaste');
+    const btnClear  = document.getElementById('btnClear');
+
+    // If SHA-256 is present and ECP field is empty, copy hash into #q before verify runs
+    btnVerify.addEventListener('click', () => {
+      if (!q.value && h.value) q.value = h.value.trim();
+    });
+
+    // Paste into the first empty field (ECP first, then hash)
+    btnPaste.addEventListener('click', async () => {
+      try {
+        const text = (await navigator.clipboard.readText() || '').trim();
+        if (!text) return;
+        if (!q.value) q.value = text; else h.value = text;
+      } catch {}
+    });
+
+    // Reset both inputs (the original script already clears #q and the result)
+    btnClear.addEventListener('click', () => { h.value = ''; });
+  </script>
 </body>
 </html>
