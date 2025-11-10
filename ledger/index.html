@@ -1,59 +1,175 @@
-<!-- ==== Verification Card (minimal) ==== -->
-<section class="card glass edge verify-card" id="verify-card">
-  <header class="verify-head">
-    <h2>Verification</h2>
-    <button class="btn ghost sm" id="resetBtn" type="button" aria-label="Reset">Reset</button>
-  </header>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>EchoprintOS · Ledger</title>
 
-  <div class="verify-row">
-    <input id="ecpInput" type="text"
-           inputmode="latin"
-           autocomplete="off"
-           placeholder="EchoprintOS Record ID (ECP-…)" />
+<style>
+  :root{
+    --bg0:#0B0F12;--bg1:#10161B;--edge:#1f2a33;--glow:#19d3a7;
+    --text:#dfe7ee;--muted:#a8b3bd;--chip:#23313a;--chiptext:#9fb3bf;
+  }
+  html,body{height:100%} body{margin:0;background:radial-gradient(1200px 600px at 10% 0%,#0d2730 0%,#0B0F12 45%,#0B0F12 100%); color:var(--text); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;}
+  .wrap{max-width:940px;margin:40px auto;padding:20px}
+  .card{background:linear-gradient(180deg,rgba(18,25,31,.85),rgba(12,18,23,.85)); border:1px solid var(--edge); border-radius:22px; box-shadow:0 10px 40px rgba(0,0,0,.35); padding:26px}
+  .h1{font-size:38px; font-weight:800; margin:0 0 18px}
+  .subtle{color:var(--muted)}
+  .row{display:flex; gap:14px; flex-wrap:wrap}
+  .pill{flex:1 1 360px; background:#0e151b; border:1px solid #1d2a33; color:var(--text); border-radius:999px; padding:16px 20px; outline:none}
+  .pill::placeholder{color:#647683}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; border:0; border-radius:999px; padding:16px 22px; font-weight:700; cursor:pointer}
+  .btn-primary{background:linear-gradient(90deg,#17caa1,#19d3a7); color:#052321}
+  .btn-ghost{background:#0f171d; color:var(--text); border:1px solid #223039}
+  .btn-small{padding:8px 12px; font-weight:600}
+  .right{margin-left:auto}
+  .hint{margin-top:14px; color:#a3b0ba}
+  .quote{margin-top:6px; padding-left:12px; border-left:3px solid var(--glow); color:#b8c5cf; font-style:italic}
+  .badge{display:inline-block; background:var(--chip); color:var(--chiptext); padding:4px 10px; border-radius:999px; font-size:12px; letter-spacing:.02em}
+  .stack{display:flex; flex-direction:column; gap:16px}
+  .spacer{height:22px}
 
-    <input id="hashInput" type="text"
-           inputmode="latin"
-           autocomplete="off"
-           placeholder="Or enter full SHA-256 hash" />
-  </div>
+  /* Modal */
+  .backdrop{position:fixed; inset:0; background:rgba(3,8,12,.55); backdrop-filter: blur(6px); display:none}
+  .modal{position:fixed; left:50%; top:48%; transform:translate(-50%,-50%); width:min(720px,92vw); background:linear-gradient(180deg,#0f161c,#0b1116); border:1px solid #22313a; border-radius:18px; box-shadow:0 18px 80px rgba(0,0,0,.55); display:none}
+  .modal .head{display:flex; align-items:center; gap:10px; padding:18px 20px; border-bottom:1px solid #1c2730}
+  .modal .title{font-size:20px; font-weight:800; letter-spacing:.02em}
+  .modal .body{padding:18px 20px 22px}
+  .kv{margin:14px 0}
+  .k{color:#9db0bb; font-weight:700; letter-spacing:.04em}
+  .v{margin-top:6px; word-break:break-word}
+  .hr{height:1px; background:#18222b; margin:14px 0 8px}
+  .closeX,.linkBtn{border:1px solid #2a3943; background:#111a20; color:var(--text); border-radius:999px; padding:10px 14px; cursor:pointer}
+  .linkBtn{margin-left:auto}
+  .footerNote{color:#9fb2bd; margin-top:8px}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <div class="h1">Verification</div>
+        <button class="btn btn-ghost btn-small right" id="resetBtn">↺ Reset</button>
+      </div>
 
-  <div class="verify-actions">
-    <button class="btn primary" id="verifyBtn" type="button">Verify Record</button>
-  </div>
-
-  <p class="muted micro under-hint">
-    Verify by EchoprintOS Record ID or 64-hex hash.
-  </p>
-</section>
-
-<!-- ==== Pop-out (modal) ==== -->
-<div class="verify-pop hidden" id="verifyPop" aria-hidden="true">
-  <div class="echocard" role="dialog" aria-modal="true" aria-labelledby="certTitle">
-    <div class="topline">
-      <h3 id="certTitle" class="cardtitle">Echoprint Certificate</h3>
-      <div class="topbtns">
-        <a id="openLink" class="btn ghost sm" href="#" target="_blank" rel="noopener">Open on Substack</a>
-        <button id="closePop" class="btn ghost sm" type="button" aria-label="Close">Close</button>
+      <div class="stack">
+        <input id="ecpInput" class="pill" autocomplete="off" placeholder="EchoprintOS Record ID (ECP-…)" />
+        <input id="hashInput" class="pill" autocomplete="off" placeholder="Or enter full 64-hex SHA-256 hash" />
+        <div class="row">
+          <button id="verifyBtn" class="btn btn-primary" style="min-width:220px">Verify Record</button>
+        </div>
+        <div class="hint">Verify by EchoprintOS Record ID or 64-hex hash.</div>
+        <div class="quote">“Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”</div>
+        <div class="hint">Verified by EchoprintOS Provenance Layer.</div>
       </div>
     </div>
-    <hr class="divline" />
-    <dl class="kv">
-      <dt>TITLE</dt>
-      <dd id="kTitle">—</dd>
 
-      <dt>EchoprintOS Record ID</dt>
-      <dd id="kEcp" class="mono">—</dd>
+    <div class="spacer"></div>
+  </div>
 
-      <dt>TIMESTAMP (UTC)</dt>
-      <dd id="kTime" class="mono">—</dd>
-    </dl>
-
-    <p class="muted verify-note">
-      Verified through the EchoprintOS Provenance Layer.
-    </p>
-
-    <div class="modal-foot">
-      <button class="btn outline" id="closeBottom" type="button">Close</button>
+  <!-- Modal -->
+  <div id="backdrop" class="backdrop"></div>
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="head">
+      <span class="badge">LEDGER</span>
+      <div id="mTitle" class="title">Echoprint Certificate</div>
+      <a id="openExternal" class="linkBtn" target="_blank" rel="noopener">Open on Substack</a>
+      <button id="closeX" class="closeX">Close</button>
+    </div>
+    <div class="body">
+      <div class="kv"><div class="k">TITLE</div><div id="mTitleText" class="v">—</div></div>
+      <div class="kv"><div class="k">EchoprintOS Record ID</div><div id="mEcp" class="v">—</div></div>
+      <div class="kv"><div class="k">TIMESTAMP (UTC)</div><div id="mTs" class="v">—</div></div>
+      <div class="hr"></div>
+      <div class="footerNote">Verified through the EchoprintOS Provenance Layer.</div>
     </div>
   </div>
-</div>
+
+<script>
+/* ====== CONFIG (replace the two placeholders) ====== */
+const SUPABASE_URL  = 'https://cyndhzyfaffprdebclnw.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
+const SUBSTACK_FALLBACK = 'https://biojusticetruth.substack.com'; // your publication homepage
+const VIEW = 'v_echoprints_public';
+const BASE = `${SUPABASE_URL}/rest/v1`;
+const HEADERS = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+
+/* ====== HELPERS ====== */
+const el = id => document.getElementById(id);
+const ecpRe = /^ECP-\d{14,}$/i;
+const hashRe = /^[a-f0-9]{64}$/i;
+const fmtUTC = iso => {
+  try {
+    const d = new Date(iso);
+    const f = new Intl.DateTimeFormat('en', {
+      weekday:'short', day:'2-digit', month:'short', year:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone:'UTC'
+    }).format(d);
+    return `${f} UTC`;
+  } catch { return iso || '—'; }
+};
+
+async function fetchOne(qs){
+  const r = await fetch(`${BASE}/${VIEW}?${qs}&limit=1`, { headers: HEADERS });
+  if (!r.ok) return null;
+  const j = await r.json();
+  return j[0] || null;
+}
+async function getByEcp(ecp){
+  const enc = encodeURIComponent(ecp);
+  return fetchOne(`select=title,record_id,hash,timestamp_iso,url,source&record_id=eq.${enc}`);
+}
+async function getByHash(sha){
+  const enc = encodeURIComponent(sha);
+  return fetchOne(`select=title,record_id,hash,timestamp_iso,url,source&hash=eq.${enc}`);
+}
+
+/* ====== UI WIRING ====== */
+const ecpInput   = el('ecpInput');
+const hashInput  = el('hashInput');
+const verifyBtn  = el('verifyBtn');
+const resetBtn   = el('resetBtn');
+
+const backdrop   = el('backdrop');
+const modal      = el('modal');
+const openExternal = el('openExternal');
+const closeX     = el('closeX');
+const mTitleText = el('mTitleText');
+const mEcp       = el('mEcp');
+const mTs        = el('mTs');
+
+function showModal(){ backdrop.style.display='block'; modal.style.display='block'; }
+function hideModal(){ backdrop.style.display='none'; modal.style.display='none'; }
+
+backdrop.addEventListener('click', hideModal);
+closeX.addEventListener('click', hideModal);
+
+resetBtn.addEventListener('click', () => {
+  ecpInput.value=''; hashInput.value='';
+});
+
+verifyBtn.addEventListener('click', async () => {
+  const ecp  = ecpInput.value.trim();
+  const hash = hashInput.value.trim();
+
+  let rec = null;
+  if (ecpRe.test(ecp)) rec = await getByEcp(ecp);
+  else if (hashRe.test(hash)) rec = await getByHash(hash);
+  else { alert('Enter a valid ECP-… ID or a 64-hex SHA-256 hash.'); return; }
+
+  if (!rec){ alert('No record found.'); return; }
+
+  mTitleText.textContent = rec.title || '—';
+  mEcp.textContent       = rec.record_id || '—';
+  mTs.textContent        = fmtUTC(rec.timestamp_iso);
+
+  // Substack link handling
+  const url = (rec.source === 'Substack' && rec.url) ? rec.url : SUBSTACK_FALLBACK;
+  openExternal.href = url;
+
+  showModal();
+});
+</script>
+</body>
+</html>
