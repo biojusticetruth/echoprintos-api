@@ -57,8 +57,7 @@ function render(rows, listEl){
 
 async function loadFeed(){
   const listEl = document.querySelector('#feed-list') || document.querySelector('#recent');
-  const statEl = document.querySelector('#feed-stat') || document.querySelector('#recentStatus');
-
+  
   if (!listEl) return;
 
   try{
@@ -80,7 +79,6 @@ async function loadFeed(){
     
     render(rows, listEl);
   }catch(err){
-    if (statEl) statEl.textContent = 'Error';
     listEl.innerHTML = `<li class="item">Feed error. ${esc(err.message)}</li>`;
     console.error(err);
   }
