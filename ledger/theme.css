@@ -64,14 +64,6 @@ body.parchment::after{
   box-shadow: var(--shadow);
   padding: 18px 20px;
 }
-.card.hero{ padding: 22px 22px }
-.eyebrow{ color: var(--muted); letter-spacing:.12em; font-size:12px; margin-bottom:6px }
-.hero-title{
-  font-family: "Playfair Display", serif;
-  font-weight:700; font-size: clamp(28px, 4vw, 40px);
-  margin: 0 0 6px;
-}
-.hero-copy{ color: var(--muted); margin: 0 }
 
 /* Quote */
 .quote-card{ border-left: 4px solid var(--accent) }
