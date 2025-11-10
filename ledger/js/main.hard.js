@@ -93,15 +93,77 @@ async function loadRecent() {
   }
 }
 
-// --- Verify handler ---
+function openVerifyCard(r){
+  const iso = r.timestamp_iso || r.created_at;
+  const when = iso ? isoUTC(iso) : '';
+  const ecpShow = iso ? ecpFromIso(when) : '';
+  const t = esc(r.title || '(untitled)');
+  const view = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" class="btn outline">View</a>` : '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'verify-pop';
+  wrap.innerHTML = `
+    <div class="echocard">
+      <div class="topline">
+        <strong>${t}</strong>
+        <div>${view} <button class="close" type="button">Close</button></div>
+      </div>
+      ${ecpShow ? `<div class="muted" style="margin-top:.25rem"><strong>EchoprintOS Record ID</strong><br><code class="mono">${ecpShow}</code></div>` : ''}
+      ${when ? `<div class="muted" style="margin-top:.5rem"><strong>TIMESTAMP (UTC)</strong><br><code class="mono">${when}</code></div>` : ''}
+      ${r.hash ? `<div class="muted" style="margin-top:.5rem"><code class="mono" style="opacity:.8">${esc(r.hash)}</code></div>` : ''}
+    </div>
+  `;
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+  wrap.querySelector('.close').addEventListener('click', close);
+  document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') close(); }, {once:true});
+  document.body.appendChild(wrap);
+}
+
+function announceInline(msg){
+  // brief inline message under the buttons if nothing found / error
+  const p = document.createElement('p');
+  p.className = 'tip muted';
+  p.style.marginTop = '8px';
+  p.textContent = msg;
+  // put it right after the Paste button
+  btnPaste.insertAdjacentElement('afterend', p);
+  setTimeout(()=>p.remove(), 3000);
+}
+
 async function verify() {
-  resBox.innerHTML = '';
   const ecp = (inpEcp.value || '').trim();
   const hex = (inpHash.value || '').trim();
+  if (!ecp && !hex) { announceInline('Enter an ECP or full hash.'); return; }
 
-  if (!ecp && !hex) {
-    resBox.innerHTML = `<div class="muted">Enter an ECP or full hash.</div>`;
-    return;
+  const select = 'select=id,title,url,hash,timestamp_iso,created_at';
+  let url = `${SUPABASE_URL}/rest/v1/echoprints?${select}&limit=1`;
+
+  const ors = [];
+  if (hex) ors.push(`hash.eq.${hex}`);
+  if (ecp) {
+    const iso = isoFromEcp(ecp);
+    if (iso) {
+      ors.push(`created_at.eq.${encodeURIComponent(iso)}`);
+      ors.push(`timestamp_iso.eq.${encodeURIComponent(iso)}`);
+    } else {
+      announceInline('ECP format should be ECP-YYYYMMDDHHMMSSmmm'); return;
+    }
+  }
+  url += `&or=(${ors.join(',')})`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      cache: 'no-store'
+    });
+    if (!res.ok) { announceInline(`Verify error: ${res.status}`); return; }
+    const rows = await res.json();
+    if (!rows.length) { announceInline('No matching record found.'); return; }
+    openVerifyCard(rows[0]);
+  } catch (e) {
+    console.error(e);
+    announceInline('Verify error.');
   }
 
   // Build PostgREST query
