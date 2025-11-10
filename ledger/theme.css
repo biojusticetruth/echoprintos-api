@@ -18,6 +18,30 @@
   --r: 16px;
 }
 
+:root { --bio-green: #1CC467; }
+
+/* Brand on the left */
+header a[href="/"],
+header .brand,
+header .site-title {
+  color: var(--bio-green);
+}
+
+/* “Ledger” pill on the right */
+header a[href="/ledger"],
+header a[href="/ledger/"],
+header nav a[href*="/ledger"] {
+  background: var(--bio-green);
+  border-color: var(--bio-green);
+  color: #fff !important;
+}
+
+/* gentle hover */
+header nav a[href*="/ledger"]:hover,
+header nav a[href*="/ledger"]:focus {
+  filter: brightness(.95);
+}
+
 /* Base */
 *{ box-sizing: border-box }
 html,body{ margin:0 }
