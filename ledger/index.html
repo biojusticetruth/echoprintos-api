@@ -51,130 +51,72 @@
     </section>
   </main>
 
-  <!-- Page JS (REST only; no DB functions needed) -->
-  <script>
-  // --- Supabase REST setup (read-only) ---
+<script>
+(async () => {
   const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
-  const SUPABASE_ANON_KEY =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
-  const HDR = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
-  // --- helpers ---
-  const $ = s => document.querySelector(s);
-  const esc = s => (s ?? '').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const statusEl = document.getElementById('recentStatus');
+  const listEl   = document.getElementById('recent');
 
-  // controls
-  const ecpInput  = $('#ecp');
-  const hashInput = $('#hash');
-  $('#btnReset').onclick = () => { ecpInput.value=''; hashInput.value=''; };
-  $('#btnPaste').onclick  = async () => { try {
-    const t = (await navigator.clipboard.readText()).trim();
-    if (!t) return;
-    (/^ECP-\d{14,}$/.test(t) ? ecpInput : hashInput).value = t;
-  } catch(_){} };
-
-  // verify
-  $('#btnVerify').onclick = async () => {
-    const ecp = ecpInput.value.trim();
-    const hex = hashInput.value.trim();
-    let qs = 'select=title,url,hash,timestamp_iso,ecp_record_id,record_id';
-    if (ecp && /^ECP-\d{14,}$/.test(ecp)) {
-      qs += `&ecp_record_id=eq.${encodeURIComponent(ecp)}`;
-    } else if (hex && /^[a-f0-9]{64}$/i.test(hex)) {
-      qs += `&hash=eq.${encodeURIComponent(hex.toLowerCase())}`;
-    } else {
-      return showPop('Nothing to verify',
-        'Enter an EchoprintOS Record ID (ECP-…) or a full 64-hex SHA-256 hash.');
-    }
-
-    try {
-      const res  = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers: HDR, cache: 'no-store' });
-      const rows = await res.json();
-      if (!res.ok || !rows.length) return showPop('Not found', 'No matching Echoprint was found.');
-      renderVerify(rows[0]);
-    } catch {
-      showPop('Network error', 'Could not reach the ledger.');
-    }
+  // helpers
+  const pad  = (n, w=2) => String(n).padStart(w, '0');
+  const esc  = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmt  = ts => { try { const d = new Date(ts); return isNaN(d)? ts : d.toLocaleString(); } catch { return ts; } };
+  const ecpFrom = ts => {
+    const d = new Date(ts);
+    return `ECP-${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}${pad(d.getUTCMilliseconds(),3)}`;
   };
 
-  // pop-out “certificate”
-  function renderVerify(r){
-    const title = r.title || '(untitled)';
-    const when  = r.timestamp_iso ? new Date(r.timestamp_iso).toISOString() : '';
-    const url   = r.url;
+  // read by created_at (stable), newest first
+  const qs = [
+    'select=title,url,hash,source,created_at,created_iso',
+    'order=created_at.desc',
+    'limit=12'
+  ].join('&');
 
-    const wrap = document.createElement('div');
-    wrap.className = 'verify-pop';
-    wrap.innerHTML = `
-      <div class="echocard">
-        <div class="topline">
-          <h3 class="cardtitle">Verified via EchoprintOS</h3>
-          <div class="actions">
-            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn small outline">View</a>` : ''}
-            <button class="btn small ghost" data-close>Close</button>
-          </div>
-        </div>
-
-        <div class="kv"><div class="k">TITLE</div><div class="v">${esc(title)}</div></div>
-        <div class="kv"><div class="k">EchoprintOS Record ID</div><div class="v mono">${esc(r.ecp_record_id || '—')}</div></div>
-        <div class="kv"><div class="k">SHA-256 HASH</div><div class="v mono">${esc(r.hash || '—')}</div></div>
-        <div class="kv"><div class="k">TIMESTAMP (UTC)</div><div class="v mono">${esc(when)}</div></div>
-
-        <div class="note muted">Provenance layer confirmation.</div>
-      </div>
-    `;
-    wrap.addEventListener('click', (e) => {
-      if (e.target === wrap || e.target.hasAttribute('data-close')) wrap.remove();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      cache: 'no-store'
     });
-    document.body.appendChild(wrap);
-  }
+    if (!res.ok) { statusEl.textContent = `Read error: ${res.status}`; return; }
 
-  function showPop(title, msg){
-    const wrap = document.createElement('div');
-    wrap.className = 'verify-pop';
-    wrap.innerHTML = `
-      <div class="echocard">
-        <div class="topline">
-          <h3 class="cardtitle">${esc(title)}</h3>
-          <button class="btn small ghost" data-close>Close</button>
-        </div>
-        <p class="muted" style="margin:4px 0 2px">${esc(msg)}</p>
-      </div>`;
-    wrap.addEventListener('click', (e)=>{ if (e.target===wrap || e.target.hasAttribute('data-close')) wrap.remove(); });
-    document.body.appendChild(wrap);
-  }
+    // rows newest → oldest
+    let rows = await res.json();
 
-  // recent feed (hide “Test” junk; only show rows that have URL + title)
-  (async () => {
-    const qs = [
-      'select=title,url,timestamp_iso,ecp_record_id,hash,source',
-      'order=timestamp_iso.desc,nullsLast',
-      'limit=20'
-    ].join('&');
+    // hide obvious test/fake rows (title starts with "test", "img_", etc.)
+    rows = rows.filter(r => {
+      const t = (r.title || '').trim().toLowerCase();
+      return t && !/^test\b|^img_|^coming soon\b/.test(t);
+    });
 
-    const res  = await fetch(`${SUPABASE_URL}/rest/v1/echoprints?${qs}`, { headers: HDR, cache:'no-store' });
-    const rows = res.ok ? await res.json() : [];
-    const clean = rows.filter(r =>
-      r.title && r.url &&
-      !/^test\b/i.test(r.title) && (r.source || '').toLowerCase() !== 'test'
-    );
+    if (!rows.length) { statusEl.textContent = 'No records yet.'; return; }
 
-    const list = $('#recent'), status = $('#recentStatus');
-    if (!clean.length){ status.textContent = 'No records yet.'; return; }
-    status.textContent = '';
+    statusEl.textContent = '';
 
-    list.innerHTML = clean.map(r => {
-      const when = r.timestamp_iso ? new Date(r.timestamp_iso).toLocaleString() : '';
-      const ecp  = r.ecp_record_id ? `<div class="mini mono">${esc(r.ecp_record_id)}</div>` : '';
-      return `<li class="feed-card">
-                <div class="feed-main">
-                  <a class="feed-title" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
-                  ${ecp}
-                </div>
-                <div class="feed-meta">${esc(when)}</div>
-              </li>`;
+    listEl.innerHTML = rows.map(r => {
+      const title = (r.url && r.url.startsWith('http'))
+        ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>`
+        : esc(r.title);
+
+      const ts = r.created_iso || r.created_at || '';
+      const when = ts ? fmt(ts) : '';
+      const ecp = ts ? ecpFrom(ts) : '';
+      const hashShort = r.hash ? `${esc(r.hash.slice(0,10))}…` : '';
+
+      return `
+        <li class="echocard">
+          <div class="row1">${title}${r.source ? ` <span class="pill">${esc(r.source)}</span>` : ''}</div>
+          ${ecp ? `<div class="row2 mono">${esc(ecp)}</div>` : ''}
+          <div class="row3 muted">${esc(when)} ${hashShort ? ` • <code class="mono" style="opacity:.7">${hashShort}</code>` : ''}</div>
+        </li>`;
     }).join('');
-  })();
-  </script>
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = 'Read error.';
+  }
+})();
+</script>
 </body>
 </html>
