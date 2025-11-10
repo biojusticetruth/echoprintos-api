@@ -176,3 +176,11 @@ a:hover{ text-decoration:underline }
   .bj-quote-text{ font-size:18px; }
   .bj-quote::before{ top:46px; width:36px; }
 }
+
+.list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 12px; }
+.list .item { border-top: 0; padding: 0; }
+.feed-card { padding: 16px; }
+.fc-top { display:flex; align-items:center; gap:10px; }
+.fc-title { font-weight: 600; text-decoration: none; color: var(--text); }
+.fc-title:hover { text-decoration: underline; }
+.fc-meta { margin-top: 6px; color: var(--muted); font-size: .92em; }
