@@ -8,7 +8,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 // Query: newest first by ledger time; show platform + optional original publish time
 const FEED_QS = [
-  'select=title,url,platform,created_at,original_published_at',
+  'select=title,url,platform,created_at,original_published_at,record_id,id',
   'or=(is_test.is.false,is_test.is.null)',
   'order=created_at.desc',
   'limit=30'
@@ -73,11 +73,22 @@ async function loadFeed(){
         : title;
 
       return `
-        <li class="item" style="margin:.6rem 0">
-          <div>${titleHtml}</div>
-          <small class="muted">Ledger: ${ledger}${pub}${plat}</small>
-        </li>
-      `;
+  <li class="item" style="margin:.6rem 0">
+    <div>
+      ${row.url
+        ? `<a href="${href}" target="_blank" rel="noopener">${title}</a>`
+        : title}
+    </div>
+
+    <small class="muted">Ledger: ${ledger}${pub}${plat}</small>
+    ${row.record_id || row.id ? `
+      <div class="mono" style="opacity:.8;margin-top:.15rem">
+        ${row.record_id ? `ECP: <span title="${esc(row.record_id)}">${esc(row.record_id)}</span>` : ''}
+        ${row.record_id && row.id ? ' · ' : ''}
+        ${row.id ? `UUID: <span title="${esc(row.id)}">${esc(row.id)}</span>` : ''}
+      </div>` : ''}
+  </li>
+`;
     }).join('');
   }catch(err){
     if (statEl) statEl.textContent = 'Error';
