@@ -208,3 +208,31 @@ a:hover{ text-decoration:underline }
 .fc-title { font-weight: 600; text-decoration: none; color: var(--text); }
 .fc-title:hover { text-decoration: underline; }
 .fc-meta { margin-top: 6px; color: var(--muted); font-size: .92em; }
+
+/* Brand green (fallback) */
+:root { --brand-green: #10B981; }
+
+/* Ensure left wordmark is green (you already have this) */
+header .brand a { color: var(--brand-green); font-weight: 700; }
+
+/* Make the top-right Ledger link text-only, same style as brand */
+header a[href="/ledger"],
+header a[href="/ledger/"],
+nav a[href="/ledger"],
+nav a[href="/ledger/"]{
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--brand-green) !important;
+  font-weight: 700;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  line-height: 1.1;
+}
+
+/* subtle affordance */
+header a[href*="/ledger"]:hover,
+header a[href*="/ledger"]:focus-visible{
+  text-decoration: underline;
+  text-underline-offset: .2rem;
+}
