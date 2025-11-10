@@ -6,11 +6,11 @@
 const SUPABASE_URL  = 'https://cyndhzyfaffprdebclnw.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
-// Query: newest first by ledger time; show platform + optional original publish time
+// NEW: include ECP (record_id) + UUID (id)
 const FEED_QS = [
   'select=title,url,platform,created_at,original_published_at,record_id,id',
   'or=(is_test.is.false,is_test.is.null)',
-  'order=created_at.desc',
+  'order=created_at.desc.nullslast',
   'limit=30'
 ].join('&');
 
@@ -26,16 +26,13 @@ function fmtUTC(iso){
     const d = new Date(iso);
     if (isNaN(d)) return esc(iso || '');
     return d.toLocaleString(undefined, { timeZone: 'UTC' }) + ' UTC';
-  }catch{
-    return esc(iso || '');
-  }
+  }catch{ return esc(iso || ''); }
 }
 
 async function loadFeed(){
   const listEl = document.querySelector('#feed-list') || document.querySelector('#recent');
   const statEl = document.querySelector('#feed-stat') || document.querySelector('#recentStatus');
-
-  if (!listEl) return; // nothing to render into
+  if (!listEl) return;
   if (statEl) statEl.textContent = 'Loading…';
 
   try{
@@ -46,55 +43,53 @@ async function loadFeed(){
       },
       cache: 'no-store'
     });
-
     if (!r.ok){
       const t = await r.text().catch(()=> '');
       throw new Error(`HTTP ${r.status} • ${t || '—'}`);
     }
-
     const rows = await r.json();
-
-    if (!rows.length){
-      if (statEl) statEl.textContent = 'No records yet.';
-      listEl.innerHTML = '';
-      return;
-    }
-    if (statEl) statEl.textContent = String(rows.length);
-
-    listEl.innerHTML = rows.map(row => {
-      const title  = esc(row.title || '(untitled)');
-      const href   = row.url ? esc(row.url) : '#';
-      const ledger = row.created_at ? fmtUTC(row.created_at) : '';
-      const pub    = row.original_published_at ? ` · Published: ${fmtUTC(row.original_published_at)}` : '';
-      const plat   = row.platform ? ` · ${esc(row.platform)}` : '';
-
-      const titleHtml = row.url
-        ? `<a href="${href}" target="_blank" rel="noopener">${title}</a>`
-        : title;
-
-      return `
-  <li class="item" style="margin:.6rem 0">
-    <div>
-      ${row.url
-        ? `<a href="${href}" target="_blank" rel="noopener">${title}</a>`
-        : title}
-    </div>
-
-    <small class="muted">Ledger: ${ledger}${pub}${plat}</small>
-    ${row.record_id || row.id ? `
-      <div class="mono" style="opacity:.8;margin-top:.15rem">
-        ${row.record_id ? `ECP: <span title="${esc(row.record_id)}">${esc(row.record_id)}</span>` : ''}
-        ${row.record_id && row.id ? ' · ' : ''}
-        ${row.id ? `UUID: <span title="${esc(row.id)}">${esc(row.id)}</span>` : ''}
-      </div>` : ''}
-  </li>
-`;
-    }).join('');
+    if (statEl) statEl.textContent = String(rows.length || 0);
+    render(rows, listEl);
   }catch(err){
     if (statEl) statEl.textContent = 'Error';
     listEl.innerHTML = `<li class="item">Feed error. ${esc(err.message)}</li>`;
     console.error(err);
   }
+}
+
+// NEW: print ECP (record_id) + UUID (id) in small gray mono lines
+function render(rows, listEl){
+  if (!rows?.length){
+    listEl.innerHTML = `<li class="item">No posts yet.</li>`;
+    return;
+  }
+  listEl.innerHTML = rows.map(row => {
+    const title  = esc(row.title || '(untitled)');
+    const href   = row.url ? esc(row.url) : '#';
+    const ledger = row.created_at ? fmtUTC(row.created_at) : '';
+    const pub    = row.original_published_at ? ` · Published: ${fmtUTC(row.original_published_at)}` : '';
+    const plat   = row.platform ? ` · ${esc(row.platform)}` : '';
+    const ecp    = row.record_id ? esc(row.record_id) : '';
+    const uuid   = row.id ? esc(row.id) : '';
+
+    const titleHtml = row.url
+      ? `<a class="fc-title" href="${href}" target="_blank" rel="noopener">${title}</a>`
+      : `<span class="fc-title">${title}</span>`;
+
+    return `
+      <li class="item feed-card">
+        <div class="fc-top">
+          ${titleHtml}
+          ${row.platform ? `<span class="pill">${esc(row.platform)}</span>` : ''}
+        </div>
+        <div class="fc-meta">Ledger: ${ledger}${pub}${plat}</div>
+        <div class="fc-ids">
+          ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`   : ''}
+          ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>` : ''}
+        </div>
+      </li>
+    `;
+  }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', loadFeed);
