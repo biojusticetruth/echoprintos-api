@@ -4,44 +4,54 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EchoprintOS • Ledger</title>
-  <link rel="stylesheet" href="./theme.css?v=1" />
+  <link rel="stylesheet" href="./theme.css?v=40" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
-  <!-- 🔧 Set these to your real project values -->
+  <!-- 🔧 Fill with your Supabase project creds -->
   <script>
     window.SUPABASE_URL  = "https://cyndhzyfaffprdebclnw.supabase.co";
     window.SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
   </script>
 </head>
 <body class="bg">
-  <!-- NAV (brand only, links to echoprintOS.org) -->
-  <header class="nav">
-    <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
+  <!-- NAV -->
+  <header class="nav glass">
+    <a class="brand" href="https://echoprintOS.org" target="_blank" rel="noopener">EchoprintOS</a>
     <nav class="tabs"><span class="tab active">Ledger</span></nav>
   </header>
 
   <main class="wrap">
-    <!-- HERO -->
-    <section class="card hero">
+    <!-- HERO (light, not top-heavy) -->
+    <section class="card hero sheen edge glow">
       <div class="eyebrow">LEDGER</div>
       <h1 class="hero-title">EchoprintOS Provenance Layer</h1>
       <p class="hero-copy">
-        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
-        network that preserves authorship integrity across systems. Each Echoprint is a
-        verifiable record of care: hashed, timestamped, and stored transparently.
+        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping network for authorship integrity.
+        Each Echoprint is a verifiable record of care.
       </p>
     </section>
 
-    <!-- FEED (READ-ONLY) -->
-    <section class="card" id="feed-card">
-      <h3 class="card-title">Recent <span id="feedStatus" class="muted"></span></h3>
-      <ul id="recentList" class="feed"></ul>
+    <!-- Feed -->
+    <section class="card glass" id="feed-card">
+      <div class="feed-head">
+        <h2 class="card-title">Recent</h2>
+        <span id="feedStatus" class="muted"></span>
+      </div>
+      <ul id="recentList" class="feed-grid"></ul>
       <div id="feedEmpty" class="muted" style="display:none">No records yet.</div>
+    </section>
+
+    <!-- Footer note -->
+    <section class="card glass soft">
+      <p class="foot-quote">
+        Verified by the EchoprintOS Provenance Layer. <span class="sep">•</span>
+        “Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”
+      </p>
     </section>
   </main>
 
-  <script type="module" src="./js.main.hard.js?v=1"></script>
+  <script type="module" src="./js.main.hard.js?v=40"></script>
 </body>
 </html>
