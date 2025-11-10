@@ -4,64 +4,49 @@
   <meta charset="utf-8" />
   <title>EchoprintOS • Ledger</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./theme.css?v=21" />
-  <style>
-    /* tiny layout tune-ups only */
-    .verify-head { display:flex; align-items:center; gap:.75rem }
-    .verify-head .spacer { flex:1 }
-    .verify-head .clear-link { font-size:.9rem; opacity:.6 }
-    .verify-row { display:grid; grid-template-columns: 1fr auto auto; gap:.5rem; align-items:center }
-    .verify-row .btn.ghost.small { padding:.5rem .75rem; font-size:.9rem }
-    .list { list-style:none; padding:0; margin:0 }
-    .list li + li { margin-top:.75rem }
-    .row-id { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; opacity:.85 }
-    .muted { opacity:.7 }
-    a.title { text-decoration:none }
-    a.title:hover { text-decoration:underline }
-  </style>
+
+  <!-- Single theme file for this folder -->
+  <link rel="stylesheet" href="./theme.css?v=20" />
 </head>
 <body>
 
-  <!-- Top Nav -->
+  <!-- Top Nav (glass) -->
   <header class="nav">
     <div class="wrap">
       <div class="row">
-        <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
+        <a class="brand" href="/">EchoprintOS</a>
         <a class="active" href="/ledger/">Ledger</a>
-        <!-- capture + home removed by request -->
+        <a href="/capture/">Capture</a>
         <a href="/about/">About</a>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- Hero -->
+    <!-- Hero glass card with shimmer -->
     <section class="card glass edge glow-corners sheen">
       <span class="pill">LEDGER</span>
       <h1 class="display">Proof-of-Care Ledger</h1>
-      <p class="lead">Canonical archive for the BioJustice Philosophical Framework. The ledger entry itself is the proof.</p>
+      <p class="lead">Check or confirm authenticity.</p>
     </section>
 
-    <!-- Verify -->
+    <!-- Verify (glass, stacked on mobile) -->
     <section class="card glass sheen">
-      <div class="verify-head">
-        <h2 style="margin:0">Verify</h2>
-        <div class="spacer"></div>
-        <button id="btnClear" class="btn outline clear-link">Clear</button>
-      </div>
+      <h2>Verify</h2>
 
-      <div class="verify-row" style="margin-top:.75rem">
+      <div class="verify-row">
         <input id="q" type="text" inputmode="text" autocomplete="off"
-               placeholder="64-hex hash or ECP-… record id" />
+               placeholder="ECP-…  or  64-hex hash" />
         <button id="btnVerify" class="btn primary">Verify</button>
-        <button id="btnPaste"  class="btn ghost small" title="Paste from clipboard">Paste</button>
+        <button id="btnClear"  class="btn outline">Clear</button>
+        <button id="btnPaste"  class="btn ghost" title="Paste from clipboard">Paste</button>
       </div>
 
       <div id="verifyResult" class="result"></div>
-      <p class="tip">Use a 64-hex <span class="mono">hash</span> or your <span class="mono">ECP-…</span> Record ID. This tool is a convenience; the canonical artifact is the ledger below.</p>
+      <p class="tip">Tip: Paste an <span class="mono">ECP-…</span> or 64-hex hash, then press <em>Verify</em> (or hit ↵).</p>
     </section>
 
-    <!-- Recent -->
+    <!-- Recent (glass) -->
     <section class="card glass">
       <h2>Recent</h2>
       <div id="recentStatus" class="lead">Loading…</div>
@@ -72,26 +57,24 @@
   <!-- Recent list loader (Supabase REST) -->
   <script>
   (async () => {
-    // 🔧 UPDATE THESE TWO
+    // ❗️UPDATE THESE TWO VALUES (same as before)
     const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
     const statusEl = document.getElementById('recentStatus');
-    const listEl   = document.getElementById('recent');
+    const listEl = document.getElementById('recent');
 
-    const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    const fmt = (ts) => {
+    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fmt(ts){
       try {
         const d = new Date(ts);
         return isNaN(d) ? ts : d.toLocaleString();
       } catch { return ts; }
-    };
+    }
 
-    // Ask for all possible columns; DB will return what exists
     const qs = [
-      'select=ecp_record_id,created_iso,timestamp_iso,"timestamp",title,url,source,hash',
-      'order=created_at.desc',
+      'select=title,url,hash,"timestamp",timestamp_iso,source',
+      'order=timestamp.desc',
       'limit=12'
     ].join('&');
 
@@ -103,27 +86,30 @@
         },
         cache: 'no-store'
       });
-      if (!res.ok) { statusEl.textContent = `Read error: ${res.status}`; return; }
+
+      if (!res.ok) {
+        statusEl.textContent = `Read error: ${res.status}`;
+        return;
+      }
 
       const rows = await res.json();
-      if (!rows.length) { statusEl.textContent = 'No records yet.'; return; }
+      if (!rows.length) {
+        statusEl.textContent = 'No records yet.';
+        return;
+      }
 
       statusEl.textContent = '';
       listEl.innerHTML = rows.map(r => {
-        const title = esc(r.title || '(untitled)');
-        const href  = r.url ? esc(r.url) : '';
-        const link  = href ? `<a class="title" href="${href}" target="_blank" rel="noopener">${title}</a>` : title;
-
-        const ecp   = r.ecp_record_id ? `<div class="row-id">${esc(r.ecp_record_id)}</div>` : '';
-        const when  = fmt(r.created_iso || r.timestamp_iso || r.timestamp || '');
-        const src   = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : '';
-
-        return `
-          <li>
-            <div>${link}${src}</div>
-            ${ecp}
-            <small class="muted">${esc(when)}</small>
-          </li>`;
+        const t = esc(r.title);
+        const ts = r.timestamp_iso || r.timestamp || '';
+        const when = ts ? fmt(ts) : '';
+        const hash = r.hash ? `<code class="mono" style="opacity:.7">${esc(r.hash.slice(0, 10))}…</code>` : '';
+        const src = r.source ? `<span class="pill" style="margin-left:.5rem;opacity:.7">${esc(r.source)}</span>` : '';
+        const title = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${t}</a>` : t;
+        return `<li style="margin:.5rem 0">
+                  <div>${title}${src}</div>
+                  <small class="muted">${esc(when)} ${hash}</small>
+                </li>`;
       }).join('');
     } catch (e) {
       statusEl.textContent = 'Read error.';
@@ -132,7 +118,7 @@
   })();
   </script>
 
-  <!-- Your existing verify logic (unchanged) -->
-  <script type="module" src="/ledger/js/main.hard.js?v=21"></script>
+  <!-- Your existing JS (unchanged). Cache-bust if you just edited it. -->
+  <script type="module" src="/ledger/js/main.hard.js?v=20"></script>
 </body>
 </html>
