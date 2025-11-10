@@ -339,3 +339,6 @@ body::after{
   font-weight: 600;
 }
 .echocard a.title:hover{ text-decoration: underline; }
+
+/* Hide any legacy result container */
+.result{ display:none !important; }
