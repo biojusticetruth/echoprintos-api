@@ -2,92 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EchoprintOS · Ledger</title>
-  <link rel="stylesheet" href="theme.css" />
-</head>
-<body>
-  <main class="wrap">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EchoprintOS • Ledger</title>
+  <link rel="stylesheet" href="./theme.css?v=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 
-    <!-- HERO / PROVENANCE COPY -->
+  <!-- 🔧 Set these to your real project values -->
+  <script>
+    window.SUPABASE_URL  = "https://cyndhzyfaffprdebclnw.supabase.co";
+    window.SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
+  </script>
+</head>
+<body class="bg">
+  <!-- NAV (brand only, links to echoprintOS.org) -->
+  <header class="nav">
+    <a class="brand" href="https://echoprintos.org" target="_blank" rel="noopener">EchoprintOS</a>
+    <nav class="tabs"><span class="tab active">Ledger</span></nav>
+  </header>
+
+  <main class="wrap">
+    <!-- HERO -->
     <section class="card hero">
       <div class="eyebrow">LEDGER</div>
       <h1 class="hero-title">EchoprintOS Provenance Layer</h1>
       <p class="hero-copy">
         The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping
-        network that preserves authorship integrity across systems. Each Echoprint
-        is a verifiable record of care: hashed, timestamped, and stored transparently.
+        network that preserves authorship integrity across systems. Each Echoprint is a
+        verifiable record of care: hashed, timestamped, and stored transparently.
       </p>
     </section>
 
-    <!-- VERIFICATION -->
-    <section id="verify" class="card">
-      <header class="card-head">
-        <h2>Verification</h2>
-        <button id="btnReset" class="ghost small" type="button" aria-label="Reset">⟲ Reset</button>
-      </header>
-
-      <div class="fields">
-        <input id="ecpInput" class="pill" inputmode="text" autocomplete="off"
-               placeholder="EchoprintOS Record ID (ECP-…)" />
-        <input id="hashInput" class="pill" inputmode="text" autocomplete="off"
-               placeholder="Or enter full 64-hex SHA-256 hash" />
-        <button id="btnVerify" class="primary" type="button">Verify Record</button>
-      </div>
-
-      <p class="help">Verify by EchoprintOS Record ID or 64-hex hash.</p>
-
-      <blockquote class="quote">
-        <span class="bar"></span>
-        <p>“Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”</p>
-      </blockquote>
-
-      <p class="provenance">Verified by EchoprintOS <span class="accent">Provenance Layer</span>.</p>
-    </section>
-
-    <!-- RECENT FEED -->
-    <section id="recent" class="card">
-      <header class="card-head"><h2>Recent</h2></header>
-      <div id="feed" class="feed"></div>
-      <div id="feedEmpty" class="muted" style="display:none;">No records yet.</div>
+    <!-- FEED (READ-ONLY) -->
+    <section class="card" id="feed-card">
+      <h3 class="card-title">Recent <span id="feedStatus" class="muted"></span></h3>
+      <ul id="recentList" class="feed"></ul>
+      <div id="feedEmpty" class="muted" style="display:none">No records yet.</div>
     </section>
   </main>
 
-  <!-- CERTIFICATE (SOLID SHEET; NOT TRANSPARENT) -->
-  <div id="certOverlay" class="overlay" aria-hidden="true">
-    <div class="sheet">
-      <button id="btnCloseCert" class="x" aria-label="Close">×</button>
-      <div class="sprout" aria-hidden="true">🌱</div>
-      <h3 class="sheet-title">Echoprint Certificate</h3>
-      <p class="sheet-sub">This record has been successfully verified.</p>
-
-      <div class="kv">
-        <div class="k">TITLE</div>
-        <div class="v" id="certTitle">—</div>
-      </div>
-
-      <div class="kv">
-        <div class="k">RECORD ID</div>
-        <div class="v" id="certEcp">—</div>
-      </div>
-
-      <div class="kv" id="rowHash" style="display:none;">
-        <div class="k">SHA-256 HASH</div>
-        <div class="v" id="certHash">—</div>
-      </div>
-
-      <div class="kv">
-        <div class="k">TIMESTAMP</div>
-        <div class="v" id="certTs">—</div>
-      </div>
-
-      <div class="sheet-actions">
-        <a id="openOnSubstack" class="btn-link" href="#" target="_blank" rel="noopener" style="display:none;">Open on Substack</a>
-        <button id="btnCloseBottom" class="primary">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="js/main.hard.js"></script>
+  <script type="module" src="./js.main.hard.js?v=1"></script>
 </body>
 </html>
