@@ -4,54 +4,53 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EchoprintOS • Ledger</title>
-  <link rel="stylesheet" href="./theme.css?v=40" />
+  <link rel="stylesheet" href="./theme.css?v=60" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
-  <!-- 🔧 Fill with your Supabase project creds -->
+  <!-- 🔧 Set your Supabase project -->
   <script>
     window.SUPABASE_URL  = "https://cyndhzyfaffprdebclnw.supabase.co";
     window.SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c";
   </script>
 </head>
-<body class="bg">
+<body class="parchment">
   <!-- NAV -->
-  <header class="nav glass">
+  <header class="nav">
     <a class="brand" href="https://echoprintOS.org" target="_blank" rel="noopener">EchoprintOS</a>
     <nav class="tabs"><span class="tab active">Ledger</span></nav>
   </header>
 
   <main class="wrap">
-    <!-- HERO (light, not top-heavy) -->
-    <section class="card hero sheen edge glow">
+    <!-- TITLE / INTRO -->
+    <section class="card hero">
       <div class="eyebrow">LEDGER</div>
       <h1 class="hero-title">EchoprintOS Provenance Layer</h1>
       <p class="hero-copy">
-        The BioJustice Institute maintains EchoprintOS — a cryptographic timestamping network for authorship integrity.
-        Each Echoprint is a verifiable record of care.
+        A cryptographic timestamping ledger maintained by the BioJustice Institute for authorship integrity.
       </p>
     </section>
 
-    <!-- Feed -->
-    <section class="card glass" id="feed-card">
+    <!-- QUOTE directly under title card -->
+    <section class="card quote-card">
+      <p class="quote-top">Verified by the EchoprintOS Provenance Layer.</p>
+      <blockquote class="quote">
+        “Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”
+      </blockquote>
+    </section>
+
+    <!-- FEED (READ-ONLY) -->
+    <section class="card feed-card">
       <div class="feed-head">
         <h2 class="card-title">Recent</h2>
         <span id="feedStatus" class="muted"></span>
       </div>
       <ul id="recentList" class="feed-grid"></ul>
-      <div id="feedEmpty" class="muted" style="display:none">No records yet.</div>
-    </section>
-
-    <!-- Footer note -->
-    <section class="card glass soft">
-      <p class="foot-quote">
-        Verified by the EchoprintOS Provenance Layer. <span class="sep">•</span>
-        “Care must be coded. Kindness doesn’t emerge by accident — it has to be entered into the system.”
-      </p>
+      <div id="feedEmpty" class="muted" style="display:none">No records yet — waiting for your first post.</div>
     </section>
   </main>
 
-  <script type="module" src="./js.main.hard.js?v=40"></script>
+  <script type="module" src="./js.main.hard.js?v=60"></script>
 </body>
 </html>
