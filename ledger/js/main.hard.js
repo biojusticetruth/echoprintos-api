@@ -80,7 +80,6 @@ function render(rows, listEl){
       <li class="item feed-card">
         <div class="fc-top">
           ${titleHtml}
-          ${row.platform ? `<span class="pill">${esc(row.platform)}</span>` : ''}
         </div>
         <div class="fc-meta">Ledger: ${ledger}${pub}${plat}</div>
         <div class="fc-ids">
