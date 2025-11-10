@@ -1,5 +1,5 @@
 /* ==========================================================================
-   EchoprintOS · theme.css (v20 · unified for /ledger)
+   EchoprintOS · theme.css (v22 · unified for /ledger)
    - Tokens, typography, layout
    - Nav & cards (glass mode)
    - Inputs + buttons (pill, unified height, sheen)
@@ -150,6 +150,9 @@ a:hover{ color:var(--text); }
 /* ---------- Controls ---------- */
 .verify-row{ display:grid; grid-template-columns:1fr; gap:var(--gap); align-items:center; }
 
+/* simple stack helper for vertical forms */
+.stack{ display:grid; gap: var(--gap); }
+
 input[type="text"], input[type="search"]{
   height: var(--control-h);
   width: 100%;
@@ -207,6 +210,21 @@ input:focus{
 .btn.ghost{ background: rgba(255,255,255,.03); color: var(--text); border: 1px solid #212836; }
 .btn.ghost:hover{ background: rgba(255,255,255,.05); }
 .btn:focus-visible{ outline: 2px solid rgba(32,227,178,.6); outline-offset: 2px; }
+
+/* dedicated Paste style (dark) */
+.btn.paste{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+}
+.btn.paste:hover{
+  background: rgba(255,255,255,.08);
+  transform: translateY(-1px);
+}
+
+/* small reset chip */
+.reset-chip{ opacity:.85; }
+
+/* primary sheen animation */
 @keyframes sheen{ to { transform: translateX(120%); } }
 
 /* ---------- Results & lists ---------- */
@@ -250,3 +268,74 @@ body::after{
   .card.glass.sheen:hover::after,
   .btn.primary:hover::after{ animation:none; }
 }
+
+/* ========================================================================== */
+/* Ledger extras: pop-out verify card + recent glow cards                      */
+/* ========================================================================== */
+
+/* Pop-out verify result (overlay) */
+.verify-pop {
+  position: fixed; inset: 0; z-index: 60;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,.35);
+  animation: fadeIn .12s ease-out;
+}
+.verify-pop .echocard {
+  width: min(620px, 92vw);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow:
+    0 0 0 1px rgba(64,255,214,.14),
+    0 18px 36px rgba(0,0,0,.45);
+}
+.verify-pop .topline {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:.35rem;
+}
+.verify-pop .close {
+  background: transparent; border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px; padding: 6px 10px; cursor: pointer;
+}
+
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+/* Recent grid as individual glow cards */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+  gap: var(--gap);
+}
+.echocard{
+  position:relative;
+  min-height: 150px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: box-shadow .25s, transform .25s, background .25s;
+}
+.echocard::before{
+  content:"";
+  position:absolute; inset:-28% -28%;
+  background: radial-gradient(120px 120px at 20% 0%, rgba(32,227,178,.16), transparent 60%);
+  filter: blur(24px);
+  opacity:.55; pointer-events:none;
+}
+.echocard:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(64,255,214,.16),
+    0 10px 24px rgba(0,0,0,.35);
+  background: rgba(255,255,255,.04);
+}
+.echocard a.title{
+  color: #9fe9d3;
+  text-decoration: none;
+  font-weight: 600;
+}
+.echocard a.title:hover{ text-decoration: underline; }
