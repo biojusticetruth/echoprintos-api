@@ -4,7 +4,7 @@
 <button id="go">Insert test row</button>
 <pre id="out" style="white-space:pre-wrap"></pre>
 <script>
-  const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co';
+  const SUPABASE_URL = 'https://cyndhzyfaffprdebclnw.supabase.co/rest/v1/echoprints?on_conflict=url&select=*';
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c'; // remove this file after testing
 
   document.getElementById('go').onclick = async () => {
