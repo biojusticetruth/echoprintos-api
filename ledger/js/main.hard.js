@@ -7,7 +7,11 @@ const SUPABASE_URL  = 'https://cyndhzyfaffprdebclnw.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5bmRoenlmYWZmcHJkZWJjbG53Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTQxNDUsImV4cCI6MjA3NzA3MDE0NX0.DynJLTGOKDlvLPy_W5jThsWYANens2yGKzY8am6XD6c';
 
 // NEW: include ECP (record_id) + UUID (id)
-const FEED_QS = 'select=title,url,platform,created_at,original_published_at&or=(is_test.is.false,is_test.is.null)&order=created_at.desc&limit=30';
+const FEED_QS = [
+  'select=title,url,platform,created_at,original_published_at',
+  `or=${encodeURIComponent('(is_test.is.false,is_test.is.null)')}`,
+  'order=created_at.desc',
+  'limit=30'
 ].join('&');
 
 function esc(s){
