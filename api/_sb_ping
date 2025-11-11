@@ -1,5 +1,0 @@
-export default async function handler(_req, res) {
-  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const r = await fetch(`${url}/rest/v1/`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
-  res.json({ ok: r.ok, status: r.status });
-}
