@@ -11,7 +11,7 @@ const FEED_QS = [
   'select=title,url,platform,created_at,original_published_at',
   `or=${encodeURIComponent('(is_test.is.false,is_test.is.null)')}`,
   'order=created_at.desc',
-  'limit=30'
+  'limit=100'
 ].join('&');
 
 function esc(s){
