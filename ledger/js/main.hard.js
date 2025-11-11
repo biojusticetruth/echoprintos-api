@@ -8,10 +8,10 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 // NEW: include ECP (record_id) + UUID (id)
 const FEED_QS = [
-  'select=title,url,platform,created_at,original_published_at',
-  `or=${encodeURIComponent('(is_test.is.false,is_test.is.null)')}`,
+  'select=id,record_id,title,url,platform,created_at,original_published_at',
+  'or=(is_test.is.false,is_test.is.null)',
   'order=created_at.desc',
-  'limit=100'
+  'limit=30'
 ].join('&');
 
 function esc(s){
@@ -69,9 +69,9 @@ function render(rows, listEl){
     const ledger = row.created_at ? fmtUTC(row.created_at) : '';
     const pub    = row.original_published_at ? ` · Published: ${fmtUTC(row.original_published_at)}` : '';
     const plat   = row.platform ? ` · ${esc(row.platform)}` : '';
-    const ecp    = row.record_id ? esc(row.record_id) : '';
-    const uuid   = row.id ? esc(row.id) : '';
-
+    const ecp  = row.record_id ? esc(row.record_id) : '';
+    const uuid = row.id        ? esc(row.id)        : '';
+    
     const titleHtml = row.url
       ? `<a class="fc-title" href="${href}" target="_blank" rel="noopener">${title}</a>`
       : `<span class="fc-title">${title}</span>`;
@@ -84,12 +84,13 @@ function render(rows, listEl){
         : `<span class="fc-title">${title}</span>`}
     </div>
 
-    <div class="fc-meta">Ledger: ${ledger}${pub}</div>
-
+    <!-- IDs block (small, gray, mono) -->
     <div class="fc-ids">
-      ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`   : ''}
-      ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>` : ''}
+      ${ecp  ? `<div class="idline mono">ECP: ${ecp}</div>`  : ''}
+      ${uuid ? `<div class="idline mono">UUID: ${uuid}</div>`: ''}
     </div>
+
+    <div class="fc-meta">Ledger: ${ledger}${pub}${plat}</div>
   </li>
 `;
   }).join('');
