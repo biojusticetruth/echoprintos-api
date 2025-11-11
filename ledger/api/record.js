@@ -4,8 +4,6 @@
 //   1) HMAC hex in header `X-Zapier-Signature` using WEBHOOK_SECRET over the *raw* body
 //   2) OR a shared-secret header `X-Webhook-Secret` that equals WEBHOOK_SECRET
 
-const crypto = require('crypto'); // required
-
 // --- helpers ---
 function readRaw(req) {
   return new Promise((resolve, reject) => {
