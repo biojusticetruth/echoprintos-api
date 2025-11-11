@@ -306,3 +306,27 @@ header a[href*="/ledger"]:focus-visible{
 
 /* If any old list rules linger, neutralize them */
 .list .item { border-top: 0; }
+
+/* --- Mini-card ID + timestamp size & color (smaller + gray) --- */
+.feed-card .fc-ids,
+.feed-card .meta { margin:.2rem 0 .1rem; }
+
+.feed-card .fc-idline,
+.feed-card .idline,         /* if you used .idline */
+.feed-card .fc-meta,
+.feed-card .meta {          /* if your markup used .meta */
+  font-size: .80rem;        /* smaller text */
+  line-height: 1.25;
+  color: var(--muted, #6b7280);
+  opacity: .9;
+}
+
+/* keep the monospace feel but inherit the muted gray */
+.feed-card .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted, #6b7280);
+  font-size: .80rem;
+}
+
+/* tighten spacing under the title */
+.feed-card .fc-title { margin-bottom: .15rem; }
