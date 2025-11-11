@@ -299,8 +299,10 @@ header a[href*="/ledger"]:focus-visible{
 .feed-card a.fc-title { color: var(--accent); text-decoration:none; }
 .feed-card a.fc-title:hover { text-decoration: underline; }
 
-.fc-meta { margin-top:.25rem; color:#9aa7ba; font-size:.92rem; }
-.fc-ids .idline { margin-top:.15rem; color:#7f8ba0; font-size:.86rem; line-height:1.35; overflow-wrap:anywhere; }
+/* small, quiet ID lines */
+.feed-card .fc-ids { margin:.25rem 0 .1rem; }
+.feed-card .idline { color:#6b7280; font-size:.84rem; line-height:1.25; }
+.mono { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
 
 /* If any old list rules linger, neutralize them */
 .list .item { border-top: 0; }
